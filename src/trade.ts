@@ -58,9 +58,10 @@ if (true) {
           await navigate(ship.symbol, asteroidFieldLocationSymbol);
         }
       }
+      console.log("24sec break SART");
       await new Promise((resolve) => {
-        setTimeout(resolve, 1500);
-      });
+        setTimeout(resolve, 2500);
+      }).then(() => console.log("2.5sec break finish"));
     });
   }
 }

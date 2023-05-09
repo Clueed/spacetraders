@@ -19,14 +19,16 @@ if (true) {
     async function (error) {
       // api rate limit
       if (error.response?.status === 429) {
-        const cooldown = parseFloat(error.response.data.error.data.retryAfter);
+        const cooldownFloat =
+          parseFloat(error.response.data.error.data.retryAfter) + 1;
+        const cooldown = Math.floor(cooldownFloat * 1100);
 
         await new Promise((resolve) => {
-          console.log(`[RL] Waiting ${cooldown} seconds...`);
+          console.log(`[RL] Waiting ${cooldownFloat} seconds...`);
           setTimeout(resolve, cooldown);
         });
 
-        //return api.request(error.config);
+        return api.request(error.config);
       }
 
       // wait till arrival if ship in transit
@@ -37,6 +39,7 @@ if (true) {
             error.response.data.error.data.secondsToArrival * 1000
           );
         });
+        return api.request(error.config);
       }
 
       return Promise.reject(error);

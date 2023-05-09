@@ -19,17 +19,30 @@ export async function dock(ship: string) {
 }
 
 export async function navigate(ship: string, waypointSymbol: string) {
+  let countdown = 0;
+
   await api
     .post(`my/ships/${ship}/navigate`, {
       waypointSymbol,
     })
     .then((response) => {
       if (response.status === 200) {
-        const arrival = response.data.data.nav.route.arrival;
+        const arrivalDate = new Date(response.data.data.nav.route.arrival);
+        const eta = arrivalDate.getTime() - new Date().getTime();
+
+        countdown = eta;
+
+        const etaDate = new Date(eta);
+        const [etaMinunte, etaSeconds] = [
+          etaDate.getMinutes(),
+          etaDate.getSeconds(),
+        ];
+
         const destination = response.data.data.nav.route.destination;
         const departure = response.data.data.nav.route.departure;
+
         console.log(
-          `${ship} @ ${departure.type} ${destination.symbol}: Departing for ${destination.type} ${departure.symbol}. EAT: ${arrival}`
+          `${ship} @ ${departure.type} ${destination.symbol}: Departing for ${destination.type} ${departure.symbol}. EAT: T-${etaMinunte}:${etaSeconds}`
         );
       } else {
         console.error(response);
@@ -38,12 +51,19 @@ export async function navigate(ship: string, waypointSymbol: string) {
     .catch((error) => {
       console.error(error);
     });
+
+  if (countdown > 0) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, countdown);
+    });
+  }
 }
 
 export async function extract(ship: string) {
   let atCapcity: boolean = false;
   while (atCapcity === false) {
-    let cooldown: number = 0;
+    let cooldown: number = 1;
+
     await api
       .post(`my/ships/${ship}/extract`)
       .then((response) => {
@@ -72,12 +92,10 @@ export async function extract(ship: string) {
         console.error(error);
       });
 
-    if (!atCapcity) {
-      await new Promise((resolve) => {
-        console.log(`${ship}: waiting ${cooldown} seconds...`);
-        setTimeout(resolve, 1000 * cooldown);
-      });
-    }
+    await new Promise((resolve) => {
+      console.log(`${ship}: waiting ${cooldown} seconds...`);
+      setTimeout(resolve, 1000 * cooldown);
+    });
   }
 }
 
