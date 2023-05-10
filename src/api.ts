@@ -1,5 +1,6 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import * as dotenv from "dotenv";
+import PQueue from "p-queue";
 dotenv.config();
 
 export const api = axios.create({
@@ -31,18 +32,36 @@ if (true) {
         return api.request(error.config);
       }
 
-      // wait till arrival if ship in transit
-      if (error.response?.status === 400) {
-        await new Promise((resolve) => {
-          setTimeout(
-            resolve,
-            error.response.data.error.data.secondsToArrival * 1000
-          );
-        });
-        return api.request(error.config);
-      }
-
       return Promise.reject(error);
     }
   );
+}
+
+const queue = new PQueue({ concurrency: 1, intervalCap: 1, interval: 2000 });
+
+export async function apiWrapper(
+  method: "GET" | "POST",
+  url: string,
+  data: any = {}
+) {
+  const errorCallback = (error: any) => {
+    if (error instanceof AxiosError && error?.response) {
+    }
+  };
+
+  let response;
+
+  await queue.add(() => {
+    try {
+      response = api.request({
+        url,
+        method: method,
+        data: data,
+      });
+    } catch (error: any) {
+      errorCallback(error);
+    }
+  });
+
+  return response;
 }

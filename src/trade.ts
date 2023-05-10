@@ -9,6 +9,7 @@ import {
   refuel,
   sellAll,
 } from "./util.js";
+import PQueue from "p-queue";
 
 const contractItem: TradeSymbol = "ALUMINUM_ORE";
 const asteroidFieldLocationSymbol = "X1-DF55-17335A";
@@ -17,7 +18,9 @@ const contractLocationSymbol = "X1-DF55-20250Z";
 
 if (true) {
   while (true) {
-    const myShips = await getShips();
+    const myShipsAll = await getShips();
+    console.log(myShipsAll);
+    const myShips = myShipsAll;
 
     myShips.map(async (ship) => {
       const contractItemQuantity = getInventoryQuantity(ship, contractItem);
@@ -58,10 +61,21 @@ if (true) {
           await navigate(ship.symbol, asteroidFieldLocationSymbol);
         }
       }
-      console.log("24sec break SART");
-      await new Promise((resolve) => {
-        setTimeout(resolve, 2500);
-      }).then(() => console.log("2.5sec break finish"));
+      console.log("24sec break SART", ship.symbol);
     });
   }
+} else {
+  const queue = new PQueue({ concurrency: 1, intervalCap: 1, interval: 1000 });
+
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
+  console.log(await queue.add(() => getShips()));
 }
