@@ -100,20 +100,29 @@ export type Nav = {
   systemSymbol: string;
   waypointSymbol: string;
   route: Route;
-  status: string;
+  status: "IN_TRANSIT" | "IN_ORBIT" | "DOCKED";
   flightMode: string;
 };
 
 export type Route = {
-  departure: Departure;
-  destination: Departure;
+  departure: Waypoint;
+  destination: Waypoint;
   arrival: Date;
   departureTime: Date;
 };
 
-export type Departure = {
+export type Waypoint = {
   symbol: string;
-  type: string;
+  type:
+    | "PLANET"
+    | "GAS_GIANT"
+    | "MOON"
+    | "ORBITAL_STATION"
+    | "JUMP_GATE"
+    | "ASTEROID_FIELD"
+    | "NEBULA"
+    | "DEBRIS_FIELD"
+    | "GRAVITY_WELL";
   systemSymbol: string;
   x: number;
   y: number;

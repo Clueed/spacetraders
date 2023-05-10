@@ -1,7 +1,10 @@
-import axios, { AxiosError } from "axios";
+import axios, { AxiosError, AxiosResponse } from "axios";
 import * as dotenv from "dotenv";
 import PQueue from "p-queue";
+import { sleep } from "./util.js";
 dotenv.config();
+
+const QUEUE_VERBOSE = true;
 
 export const api = axios.create({
   baseURL: "https://api.spacetraders.io/v2/",
@@ -39,29 +42,60 @@ if (true) {
 
 const queue = new PQueue({ concurrency: 1, intervalCap: 1, interval: 2000 });
 
+if (QUEUE_VERBOSE) {
+  queue.on("add", (item) => {
+    console.log(
+      `Task is added.  Size: ${queue.size}  Pending: ${queue.pending} - ${item}`
+    );
+  });
+
+  queue.on("next", () => {
+    console.log(
+      `Task is completed.  Size: ${queue.size}  Pending: ${queue.pending}`
+    );
+  });
+}
 export async function apiWrapper(
   method: "GET" | "POST",
   url: string,
-  data: any = {}
-) {
-  const errorCallback = (error: any) => {
-    if (error instanceof AxiosError && error?.response) {
-    }
-  };
-
-  let response;
-
-  await queue.add(() => {
-    try {
-      response = api.request({
+  data: object | null = null
+): Promise<any> {
+  try {
+    return await queue.add(async () => {
+      return await api.request({
         url,
-        method: method,
-        data: data,
+        method,
+        ...(data && { data }),
       });
-    } catch (error: any) {
-      errorCallback(error);
-    }
-  });
+    });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response) {
+      if (
+        error.response.status === 400 &&
+        error.response.data.error.code === 4214
+      ) {
+        // Ship in transit
+        const deltaEta = error.response.data.error.data.secondsToArrival * 1000;
 
-  return response;
+        console.log(`[IT] Waiting ${deltaEta} seconds...`);
+        sleep(deltaEta);
+        return apiWrapper(method, url, data);
+      }
+
+      if (
+        error.response.status === 409 &&
+        error.response.data.error.code === 4000
+      ) {
+        // Ship action is still on cooldown
+
+        const cooldown =
+          error.response.data.error.data.cooldown.remainingSeconds * 1000;
+
+        console.log(`[CD] Waiting ${cooldown} seconds...`);
+        await sleep(cooldown);
+        return apiWrapper(method, url, data);
+      }
+    }
+    throw error;
+  }
 }
