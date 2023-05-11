@@ -105,13 +105,13 @@ export type Nav = {
 };
 
 export type Route = {
-  departure: Waypoint;
-  destination: Waypoint;
+  departure: NavWaypoint;
+  destination: NavWaypoint;
   arrival: Date;
   departureTime: Date;
 };
 
-export type Waypoint = {
+export type NavWaypoint = {
   symbol: string;
   type:
     | "PLANET"

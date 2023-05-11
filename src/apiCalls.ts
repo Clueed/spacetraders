@@ -1,8 +1,9 @@
-import { Ship, Waypoint } from "./types/Ship.js";
+import { Ship, NavWaypoint } from "./types/Ship.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
 import { apiWrapper } from "./api.js";
 import axios from "axios";
 import { sleep } from "./util.js";
+import { Waypoint } from "./types/Waypoint.js";
 
 export async function getShips(): Promise<Ship[]> {
   try {
@@ -221,4 +222,19 @@ export async function listSystemWaypoits(
   }
 
   return waypoints;
+}
+
+export async function getMarketplace(
+  systemSymbol: string,
+  waypointSymbol: string
+) {
+  try {
+    const response = await apiWrapper(
+      "GET",
+      `systems/${systemSymbol}/waypoints/${waypointSymbol}/market`
+    );
+    return response.data.data;
+  } catch (error) {
+    console.error(error);
+  }
 }
