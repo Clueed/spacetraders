@@ -161,7 +161,7 @@ export async function deliverContract(
   }
 }
 
-export async function sell(
+export async function _sell(
   shipSymbol: string,
   units: number,
   tradeSymbol: TradeSymbol

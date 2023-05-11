@@ -1,7 +1,8 @@
-import { Ship } from "./types/Ship.js";
+import { InventoryItem, Ship } from "./types/Ship.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
-import { getShips } from "./apiCalls.js";
+import { _sell, dock, getMarketplace, getShips } from "./apiCalls.js";
 import { Trait, Waypoint } from "./types/Waypoint.js";
+import { Marketplace } from "./types/Marketplace.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -45,4 +46,62 @@ export function getInventoryQuantity(ship: Ship, itemSymbol: TradeSymbol) {
     }
   }
   return 0;
+}
+
+export async function sell(
+  ship: Ship,
+  units: number,
+  tradeSymbol: TradeSymbol
+) {
+  if (ship.nav.status === "IN_ORBIT") {
+    await dock(ship);
+  }
+
+  await _sell(ship.symbol, units, tradeSymbol);
+}
+
+export async function getMarketInfo(waypoints: Waypoint[]) {
+  const waypointsWithMarketplaces = waypoints.filter((waypoint) => {
+    return waypoint.traits.some((trait) => {
+      return trait.symbol === "MARKETPLACE";
+    });
+  });
+
+  const marketplaces = await Promise.all(
+    waypointsWithMarketplaces.map(async (waypoint) => {
+      return await getMarketplace(waypoint.systemSymbol, waypoint.symbol);
+    })
+  );
+  return marketplaces;
+}
+
+export function findMarketsForItems(
+  inventory: InventoryItem[],
+  marketplaces: Marketplace[]
+) {
+  let marketInvenstoryOverlap: any = {};
+
+  marketplaces.map((marketplace) => {
+    marketInvenstoryOverlap[marketplace.symbol] = [];
+  });
+
+  for (let marketplace of marketplaces) {
+    for (let item of inventory) {
+      if (
+        marketplace.imports.some(
+          (importItem) => importItem.symbol === item.symbol
+        )
+      ) {
+        marketInvenstoryOverlap[marketplace.symbol].push(item.symbol);
+      }
+    }
+  }
+
+  for (let m in marketInvenstoryOverlap) {
+    if (marketInvenstoryOverlap[m].length === 0) {
+      delete marketInvenstoryOverlap[m];
+    }
+  }
+
+  return marketInvenstoryOverlap;
 }

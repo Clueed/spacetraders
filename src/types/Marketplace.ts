@@ -16,7 +16,7 @@ export interface Export {
 }
 
 export interface Import {
-  symbol: TradeGood;
+  symbol: TradeSymbol;
   name: string;
   description: string;
 }

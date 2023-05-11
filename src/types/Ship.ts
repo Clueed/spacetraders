@@ -17,10 +17,10 @@ export interface Ship {
 export type Cargo = {
   capacity: number;
   units: number;
-  inventory: Inventory[];
+  inventory: InventoryItem[];
 };
 
-export type Inventory = {
+export type InventoryItem = {
   symbol: TradeSymbol;
   name: string;
   description: string;

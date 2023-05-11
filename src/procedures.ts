@@ -1,6 +1,6 @@
-import { extract, sell } from "./apiCalls.js";
+import { extract } from "./apiCalls.js";
 import { Ship } from "./types/Ship.js";
-import { sleep } from "./util.js";
+import { sell, sleep } from "./util.js";
 /**
  * Asynchronously extracts cargo from current location until it is full,
  * handling any cooldown periods between extractions.
@@ -55,6 +55,6 @@ export async function sellAllProcedure(ship: Ship) {
   const inventory = ship.cargo.inventory;
 
   for (let item of inventory) {
-    await sell(ship.symbol, item.units, item.symbol);
+    await sell(ship, item.units, item.symbol);
   }
 }
