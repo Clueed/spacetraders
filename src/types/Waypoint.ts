@@ -1,8 +1,4 @@
 export interface Waypoint {
-  data: Data;
-}
-
-export interface Data {
   systemSymbol: string;
   symbol: string;
   type: string;
@@ -24,6 +20,8 @@ export interface Faction {
 }
 
 export interface Trait {
+  name: string;
+  description: string;
   symbol:
     | "UNCHARTED"
     | "MARKETPLACE"
@@ -84,6 +82,4 @@ export interface Trait {
     | "JUNGLE"
     | "OCEAN"
     | "STRIPPED";
-  name: string;
-  description: string;
 }

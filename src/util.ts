@@ -1,6 +1,7 @@
 import { Ship } from "./types/Ship.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
 import { getShips } from "./apiCalls.js";
+import { Trait, Waypoint } from "./types/Waypoint.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

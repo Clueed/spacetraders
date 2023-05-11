@@ -4,6 +4,7 @@ import { apiWrapper } from "./api.js";
 import axios from "axios";
 import { sleep } from "./util.js";
 import { Waypoint } from "./types/Waypoint.js";
+import { Marketplace } from "./types/Marketplace.js";
 
 export async function getShips(): Promise<Ship[]> {
   try {
@@ -196,7 +197,7 @@ export async function sell(
   }
 }
 
-export async function listSystemWaypoits(
+export async function getSystemWaypoits(
   systemSymbol: string
 ): Promise<Waypoint[]> {
   let waypoints = [];
@@ -227,14 +228,18 @@ export async function listSystemWaypoits(
 export async function getMarketplace(
   systemSymbol: string,
   waypointSymbol: string
-) {
+): Promise<Marketplace> {
   try {
     const response = await apiWrapper(
       "GET",
       `systems/${systemSymbol}/waypoints/${waypointSymbol}/market`
     );
-    return response.data.data;
+    if (response.status === 200) {
+      return response.data.data;
+    } else {
+      throw response;
+    }
   } catch (error) {
-    console.error(error);
+    throw error;
   }
 }

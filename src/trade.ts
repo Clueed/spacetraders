@@ -2,7 +2,6 @@ import {
   deliverContract,
   dock,
   getShips,
-  listSystemWaypoits,
   navigate,
   refuel,
 } from "./apiCalls.js";
