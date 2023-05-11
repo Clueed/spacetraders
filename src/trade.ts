@@ -1,27 +1,20 @@
 import {
   deliverContract,
   dock,
-  getMarketplace,
   getShips,
   getSystemWaypoits,
   navigate,
   refuel,
 } from "./apiCalls.js";
-import {
-  extractTillFullProcedure,
-  inTransitProcedure,
-  sellAllProcedure,
-} from "./procedures.js";
-import { Marketplace } from "./types/Marketplace.js";
-import { InventoryItem } from "./types/Ship.js";
+import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
-import { Waypoint } from "./types/Waypoint.js";
 import {
   findMarketsForItems,
   getInventoryQuantity,
   getMarketInfo,
   getShip,
   sell,
+  sleep,
 } from "./util.js";
 
 const contractItem: TradeSymbol = "ALUMINUM_ORE";
@@ -102,7 +95,9 @@ if (true) {
             const marketsToGo = Object.keys(invOverlaps);
 
             for (let marketSymbol of marketsToGo) {
-              await navigate(ship.symbol, marketSymbol);
+              if (ship.nav.waypointSymbol !== marketSymbol) {
+                await navigate(ship.symbol, marketSymbol);
+              }
               for (let itemToSell of invOverlaps[marketSymbol]) {
                 const units = getInventoryQuantity(ship, itemToSell);
                 await sell(ship, units, itemToSell);
