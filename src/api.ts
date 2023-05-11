@@ -56,7 +56,8 @@ if (QUEUE_VERBOSE) {
 export async function apiWrapper(
   method: "GET" | "POST",
   url: string,
-  data: object | null = null
+  data: object | null = null,
+  params: object | null = null
 ): Promise<any> {
   try {
     return await queue.add(async () => {
@@ -64,13 +65,14 @@ export async function apiWrapper(
         url,
         method,
         ...(data && { data }),
+        ...(params && { params }),
       });
     });
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       if (
         error.response.status === 400 &&
-        error.response.data.error.code === 4214
+        error.response.data.error?.code === 4214
       ) {
         // Ship in transit
         const deltaEta = error.response.data.error.data.secondsToArrival * 1000;
@@ -82,7 +84,7 @@ export async function apiWrapper(
 
       if (
         error.response.status === 409 &&
-        error.response.data.error.code === 4000
+        error.response.data.error?.code === 4000
       ) {
         // Ship action is still on cooldown
         const cooldown =

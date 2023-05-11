@@ -1,4 +1,4 @@
-import { Ship } from "./types/Ship.js";
+import { Ship, Waypoint } from "./types/Ship.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
 import { apiWrapper } from "./api.js";
 import axios from "axios";
@@ -193,4 +193,32 @@ export async function sell(
       console.error(error);
     }
   }
+}
+
+export async function listSystemWaypoits(
+  systemSymbol: string
+): Promise<Waypoint[]> {
+  let waypoints = [];
+  let page = 1;
+
+  while (true) {
+    try {
+      const response = await apiWrapper(
+        "GET",
+        `systems/${systemSymbol}/waypoints?page=${page}&limit=20`
+      );
+
+      if (response.data.data.length === 0) {
+        break;
+      }
+
+      waypoints.push(...response.data.data);
+    } catch (error) {
+      console.error(error);
+    }
+
+    page++;
+  }
+
+  return waypoints;
 }

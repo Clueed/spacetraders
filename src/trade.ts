@@ -2,6 +2,7 @@ import {
   deliverContract,
   dock,
   getShips,
+  listSystemWaypoits,
   navigate,
   refuel,
 } from "./apiCalls.js";
@@ -68,7 +69,7 @@ myShipsAll.map(async (ship) => {
         }
 
         if (contractItemQuantity === 0) {
-          await sellAllProcedure(ship);
+          await sellAllProcedure(shipStatus);
         }
       }
       continue;
