@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "ts-node-esm ./src/trade.ts"
+    "dev": "node --loader ts-node/esm --inspect --trace-uncaught ./src/trade.ts"
   },
   "dependencies": {
     "axios": "^1.4.0",
