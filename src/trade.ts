@@ -5,7 +5,11 @@ import {
   navigate,
   refuel,
 } from "./apiCalls.js";
-import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
+import {
+  extractTillFullProcedure,
+  inTransitProcedure,
+  sellAllProcedure,
+} from "./procedures.js";
 import { TradeSymbol } from "./types/TradeSymbols.js";
 import { getInventoryQuantity, getShip } from "./util.js";
 
@@ -15,6 +19,7 @@ const contractId = "clheig9zm4i5ls60ddxtdkirp";
 const contractLocationSymbol = "X1-DF55-20250Z";
 
 const myShipsAll = await getShips();
+
 myShipsAll.map(async (ship) => {
   while (true) {
     const shipStatus = await getShip(ship.symbol);
@@ -63,7 +68,7 @@ myShipsAll.map(async (ship) => {
         }
 
         if (contractItemQuantity === 0) {
-          await sellAll(ship);
+          await sellAllProcedure(ship);
         }
       }
       continue;

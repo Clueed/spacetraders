@@ -11,7 +11,6 @@ import { sleep } from "./util.js";
 export async function extractTillFullProcedure(
   shipSymbol: string
 ): Promise<void> {
-  let count = 0;
   while (true) {
     try {
       const extractionStatus = await extract(shipSymbol);
@@ -19,16 +18,7 @@ export async function extractTillFullProcedure(
         break;
       }
       if (extractionStatus.cooldown > 0) {
-        count++;
-        console.log(`${shipSymbol}: Automatically extracting #${count}`);
-        //setTimeout(resolve, extractionStatus.cooldown);
-        try {
-          await sleep(extractionStatus.cooldown);
-        } catch (err) {
-          console.error(err);
-        }
-        console.log(`after cool`);
-        console.log(`after cool2`);
+        await sleep(extractionStatus.cooldown);
       }
     } catch (error) {
       console.error(error);
