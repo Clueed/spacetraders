@@ -1,8 +1,7 @@
-import { InventoryItem, Ship } from "./types/Ship.js";
-import { TradeSymbol } from "./types/TradeSymbols.js";
+import { Ship } from "./types/Ship.js";
+import { TradeSymbol } from "./types/Good.js";
 import { _sell, dock, getMarketplace, getShips } from "./apiCalls.js";
-import { Trait, Waypoint } from "./types/Waypoint.js";
-import { Marketplace } from "./types/Marketplace.js";
+import { Waypoint } from "./types/Waypoint.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -73,35 +72,4 @@ export async function getMarketInfo(waypoints: Waypoint[]) {
     })
   );
   return marketplaces;
-}
-
-export function findMarketsForItems(
-  inventory: InventoryItem[],
-  marketplaces: Marketplace[]
-) {
-  let marketInvenstoryOverlap: any = {};
-
-  marketplaces.map((marketplace) => {
-    marketInvenstoryOverlap[marketplace.symbol] = [];
-  });
-
-  for (let marketplace of marketplaces) {
-    for (let item of inventory) {
-      if (
-        marketplace.imports.some(
-          (importItem) => importItem.symbol === item.symbol
-        )
-      ) {
-        marketInvenstoryOverlap[marketplace.symbol].push(item.symbol);
-      }
-    }
-  }
-
-  for (let m in marketInvenstoryOverlap) {
-    if (marketInvenstoryOverlap[m].length === 0) {
-      delete marketInvenstoryOverlap[m];
-    }
-  }
-
-  return marketInvenstoryOverlap;
 }

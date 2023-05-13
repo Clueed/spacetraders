@@ -1,5 +1,5 @@
 import { Ship, NavWaypoint } from "./types/Ship.js";
-import { TradeSymbol } from "./types/TradeSymbols.js";
+import { TradeSymbol } from "./types/Good.js";
 import { apiWrapper } from "./api.js";
 import axios from "axios";
 import { sleep } from "./util.js";

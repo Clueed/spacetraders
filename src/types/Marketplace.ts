@@ -1,30 +1,12 @@
-import { TradeSymbol } from "./TradeSymbols.js";
+import { Good, TradeSymbol } from "./Good.js";
 
 export interface Marketplace {
   symbol: string;
-  exports: Export[];
-  imports: Import[];
-  exchange: Exchange[];
-  transactions: Transaction[];
-  tradeGoods: TradeGood[];
-}
-
-export interface Export {
-  symbol: TradeSymbol;
-  name: string;
-  description: string;
-}
-
-export interface Import {
-  symbol: TradeSymbol;
-  name: string;
-  description: string;
-}
-
-export interface Exchange {
-  symbol: TradeSymbol;
-  name: string;
-  description: string;
+  exports: Good[];
+  imports: Good[];
+  exchange: Good[];
+  transactions?: Transaction[];
+  tradeGoods?: MarketGood[];
 }
 
 export interface Transaction {
@@ -38,7 +20,7 @@ export interface Transaction {
   timestamp: string;
 }
 
-export interface TradeGood {
+export interface MarketGood {
   symbol: TradeSymbol;
   tradeVolume: number;
   supply: "SCARCE" | "LIMITED" | "MODERATE" | "ABUNDANT";

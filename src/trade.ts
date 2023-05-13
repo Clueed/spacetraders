@@ -6,16 +6,15 @@ import {
   navigate,
   refuel,
 } from "./apiCalls.js";
-import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
-import { TradeSymbol } from "./types/TradeSymbols.js";
+import { findMarketsForItems } from "./findMarketsForItems.js";
 import {
-  findMarketsForItems,
-  getInventoryQuantity,
-  getMarketInfo,
-  getShip,
-  sell,
-  sleep,
-} from "./util.js";
+  quicksort,
+  selectMarketCombination,
+} from "./findOptimalMarketplaceCombinations.js";
+import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
+import { TradeSymbol } from "./types/Good.js";
+import { Waypoint } from "./types/Waypoint.js";
+import { getInventoryQuantity, getMarketInfo, getShip, sell } from "./util.js";
 
 const contractItem: TradeSymbol = "ALUMINUM_ORE";
 const asteroidFieldLocationSymbol = "X1-DF55-17335A";
@@ -87,21 +86,49 @@ if (true) {
           if (contractItemQuantity === 0) {
             const marketplaces = await getMarketInfo(waypoints);
 
-            const invOverlaps = findMarketsForItems(
-              ship.cargo.inventory,
-              marketplaces
+            const marketItemUnion = findMarketsForItems(
+              marketplaces,
+              ship.cargo.inventory
             );
 
-            const marketsToGo = Object.keys(invOverlaps);
+            const selectedMarkets = selectMarketCombination(marketItemUnion);
 
-            for (let marketSymbol of marketsToGo) {
-              if (ship.nav.waypointSymbol !== marketSymbol) {
-                await navigate(ship.symbol, marketSymbol);
+            console.log("selectedMarkets :>> ", selectedMarkets);
+
+            let selectedWaypoints = [];
+            for (let market of selectedMarkets) {
+              for (let waypoint of waypoints) {
+                if (market.symbol === waypoint.symbol) {
+                  selectedWaypoints.push(waypoint);
+                }
               }
-              for (let itemToSell of invOverlaps[marketSymbol]) {
-                const units = getInventoryQuantity(ship, itemToSell);
-                await sell(ship, units, itemToSell);
+            }
+
+            const sortedWaypoints: Waypoint[] = quicksort(selectedWaypoints);
+
+            for (let wp of sortedWaypoints) {
+              if (ship.nav.waypointSymbol !== wp.symbol) {
+                await navigate(ship.symbol, wp.symbol);
               }
+
+              const market = marketItemUnion.findLast(
+                (miu) => miu.marketplace.symbol === wp.symbol
+              );
+
+              if (market) {
+                const availableGoods = market.availableGoods;
+                for (let itemToSell of availableGoods) {
+                  await sell(ship, itemToSell.units, itemToSell.symbol);
+                }
+              } else {
+                throw new Error("Something went wrong");
+              }
+            }
+
+            const update = await getShip(ship.symbol);
+            console.log(`${ship}: Cargo after roundtrip`);
+            for (let item of update.cargo.inventory) {
+              console.log(item.symbol, item.units);
             }
 
             await navigate(symbol, asteroidFieldLocationSymbol);
