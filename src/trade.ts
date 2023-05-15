@@ -1,6 +1,7 @@
 import {
   deliverContract,
   dock,
+  getMarketplace,
   getShips,
   getSystemWaypoits,
   navigate,
@@ -14,7 +15,16 @@ import {
 import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
 import { TradeSymbol } from "./types/Good.js";
 import { Waypoint } from "./types/Waypoint.js";
-import { getInventoryQuantity, getMarketInfo, getShip, sell } from "./util.js";
+import {
+  filterByTrait,
+  getInventoryQuantity,
+  getMarketInfo,
+  getShip,
+  sell,
+} from "./util.js";
+import { TotalMarket } from "./TotalMarket.js";
+
+const totalmarket = new TotalMarket();
 
 const contractItem: TradeSymbol = "ALUMINUM_ORE";
 const asteroidFieldLocationSymbol = "X1-DF55-17335A";
@@ -23,11 +33,29 @@ const contractLocationSymbol = "X1-DF55-20250Z";
 
 const myShipsAll = await getShips();
 
-const baseSystemSymbol = "X1-DF55";
-
+const baseSystemSymbol = "X1-ZA40"; //"X1-DF55";
 const waypoints = await getSystemWaypoits(baseSystemSymbol);
+//await navigate(myShipsAll[0].symbol, "X1-ZA40-68707C");
+/*
 
-if (true) {
+const marktplaceWaypoints = filterByTrait(waypoints, "MARKETPLACE");
+
+const route = quicksort(marktplaceWaypoints);
+
+for (let waypoint of route) {
+  await navigate(myShipsAll[0].symbol, waypoint.symbol);
+
+  const marketplace = await getMarketplace(
+    waypoint.systemSymbol,
+    waypoint.symbol
+  );
+
+  totalmarket.addMarketRecord(marketplace);
+}*/
+
+console.log("totalmarket :>> ", totalmarket);
+
+if (false) {
   myShipsAll.map(async ({ symbol }) => {
     while (true) {
       const ship = await getShip(symbol);

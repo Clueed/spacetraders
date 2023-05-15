@@ -1,7 +1,9 @@
 import { Ship } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import { _sell, dock, getMarketplace, getShips } from "./apiCalls.js";
-import { Waypoint } from "./types/Waypoint.js";
+import { Trait, TraitSymbol, Waypoint } from "./types/Waypoint.js";
+import { Marketplace } from "./types/Marketplace.js";
+import { TotalMarket } from "./TotalMarket.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -59,12 +61,18 @@ export async function sell(
   await _sell(ship.symbol, units, tradeSymbol);
 }
 
-export async function getMarketInfo(waypoints: Waypoint[]) {
-  const waypointsWithMarketplaces = waypoints.filter((waypoint) => {
-    return waypoint.traits.some((trait) => {
-      return trait.symbol === "MARKETPLACE";
+export function filterByTrait(waypoints: Waypoint[], traitSymbol: TraitSymbol) {
+  return waypoints.filter((waypoint) => {
+    return waypoint.traits.some((waypointTrait) => {
+      return waypointTrait.symbol === traitSymbol;
     });
   });
+}
+
+export async function getMarketInfo(
+  waypoints: Waypoint[]
+): Promise<Marketplace[]> {
+  const waypointsWithMarketplaces = filterByTrait(waypoints, "MARKETPLACE");
 
   const marketplaces = await Promise.all(
     waypointsWithMarketplaces.map(async (waypoint) => {
@@ -73,3 +81,5 @@ export async function getMarketInfo(waypoints: Waypoint[]) {
   );
   return marketplaces;
 }
+
+export function checkArbitrage(totalMarket: TotalMarket);
