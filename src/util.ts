@@ -82,4 +82,54 @@ export async function getMarketInfo(
   return marketplaces;
 }
 
-export function checkArbitrage(totalMarket: TotalMarket);
+export type Quote = { price: number; marketplace: Marketplace };
+
+export type Arbitrage = {
+  symbol: string;
+  bid: Quote;
+  ask: Quote;
+  spread: number;
+};
+
+export function checkArbitrage(
+  totalMarket: TotalMarket,
+  tradeSymbols: TradeSymbol[]
+): Arbitrage[] {
+  let arbitrage: Arbitrage[] = [];
+
+  for (let symbol of tradeSymbols) {
+    const ask = totalMarket.getBestPrice(symbol, "SELL");
+    const bid = totalMarket.getBestPrice(symbol, "BUY");
+    if (ask && bid) {
+      const spread = ask!.price - bid!.price;
+      if (spread > 0) {
+        arbitrage.push({ bid, ask, spread, symbol });
+      }
+    }
+  }
+
+  arbitrage.sort((a, b) => b.spread - a.spread);
+
+  return arbitrage;
+}
+
+export function groupArbitrages(arbitrage: Arbitrage[]) {
+  const groupedData: { [key: string]: any } = {};
+
+  arbitrage.forEach((item) => {
+    const askSymbol = item.ask.marketplace.symbol;
+    const bidSymbol = item.bid.marketplace.symbol;
+
+    if (!groupedData[askSymbol]) {
+      groupedData[askSymbol] = { ask: [], bid: [] };
+    }
+    if (!groupedData[bidSymbol]) {
+      groupedData[bidSymbol] = { ask: [], bid: [] };
+    }
+
+    groupedData[askSymbol].ask.push(item);
+    groupedData[bidSymbol].bid.push(item);
+  });
+
+  return groupedData;
+}

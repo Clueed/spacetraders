@@ -1,6 +1,7 @@
 import { TradeSymbol } from "./types/Good.js";
 import { Marketplace, MarketGood } from "./types/Marketplace.js";
 import fs from "fs";
+import { Quote } from "./util.js";
 
 class TotalMarketStorage {
   private readonly filePath: string = "marketRegistry.json";
@@ -71,15 +72,17 @@ export class TotalMarket extends TotalMarketStorage {
   }
 
   public uniqueItemSymbols() {
-    let uniqueSymbols: TradeSymbol[] = [];
+    //let uniqueSymbols: TradeSymbol[] = [];
+
+    let uniqueSymbols: Set<TradeSymbol> = new Set();
 
     for (let marketplace of this.lastRecords()) {
       for (let tradeGood of marketplace.tradeGoods!) {
-        uniqueSymbols.push(tradeGood.symbol);
+        uniqueSymbols.add(tradeGood.symbol);
       }
     }
 
-    return uniqueSymbols;
+    return Array.from(uniqueSymbols);
   }
 
   public getPrices(tradeSymbol: TradeSymbol) {
@@ -106,7 +109,7 @@ export class TotalMarket extends TotalMarketStorage {
   public getBestPrice(
     tradeSymbol: TradeSymbol,
     to: "BUY" | "SELL"
-  ): { price: number; marketplace: Marketplace } | null {
+  ): Quote | null {
     let options;
 
     try {

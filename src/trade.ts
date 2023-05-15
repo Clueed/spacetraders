@@ -16,15 +16,25 @@ import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
 import { TradeSymbol } from "./types/Good.js";
 import { Waypoint } from "./types/Waypoint.js";
 import {
+  checkArbitrage,
   filterByTrait,
   getInventoryQuantity,
   getMarketInfo,
   getShip,
+  groupArbitrages,
   sell,
 } from "./util.js";
 import { TotalMarket } from "./TotalMarket.js";
 
 const totalmarket = new TotalMarket();
+
+const unique = totalmarket.uniqueItemSymbols();
+
+const arbitrage = checkArbitrage(totalmarket, unique);
+
+const groupedArbitrage = groupArbitrages(arbitrage);
+
+console.log("arbitrage :>> ", groupedArbitrage);
 
 const contractItem: TradeSymbol = "ALUMINUM_ORE";
 const asteroidFieldLocationSymbol = "X1-DF55-17335A";

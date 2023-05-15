@@ -56,6 +56,3 @@ function findShortestPath(waypoints: Waypoint[]): Waypoint[] {
 
   return shortestPath;
 }
-
-const shortestPath = findShortestPath(waypoints);
-console.log(shortestPath);
