@@ -1,8 +1,15 @@
 import { Ship } from "./types/Ship.js";
-import { TradeSymbol } from "./types/Good.js";
-import { _sell, dock, getMarketplace, getShips } from "./apiCalls.js";
+import { Good, TradeSymbol } from "./types/Good.js";
+import {
+  _sell,
+  _buy,
+  dock,
+  getMarketplace,
+  getShips,
+  navigate,
+} from "./apiCalls.js";
 import { Trait, TraitSymbol, Waypoint } from "./types/Waypoint.js";
-import { Marketplace } from "./types/Marketplace.js";
+import { MarketGood, Marketplace } from "./types/Marketplace.js";
 import { TotalMarket } from "./TotalMarket.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -58,7 +65,15 @@ export async function sell(
     await dock(ship);
   }
 
-  await _sell(ship.symbol, units, tradeSymbol);
+  return await _sell(ship.symbol, units, tradeSymbol);
+}
+
+export async function buy(ship: Ship, units: number, tradeSymbol: TradeSymbol) {
+  if (ship.nav.status === "IN_ORBIT") {
+    await dock(ship);
+  }
+
+  return await _buy(ship.symbol, tradeSymbol, units);
 }
 
 export function filterByTrait(waypoints: Waypoint[], traitSymbol: TraitSymbol) {
@@ -82,10 +97,14 @@ export async function getMarketInfo(
   return marketplaces;
 }
 
-export type Quote = { price: number; marketplace: Marketplace };
+export type Quote = {
+  price: number;
+  marketplace: Marketplace;
+  type: "ASK" | "BID";
+};
 
 export type Arbitrage = {
-  symbol: string;
+  symbol: TradeSymbol;
   bid: Quote;
   ask: Quote;
   spread: number;
@@ -98,10 +117,10 @@ export function checkArbitrage(
   let arbitrage: Arbitrage[] = [];
 
   for (let symbol of tradeSymbols) {
-    const ask = totalMarket.getBestPrice(symbol, "SELL");
-    const bid = totalMarket.getBestPrice(symbol, "BUY");
+    const ask = totalMarket.getBestPrice(symbol, "ASK");
+    const bid = totalMarket.getBestPrice(symbol, "BID");
     if (ask && bid) {
-      const spread = ask!.price - bid!.price;
+      const spread = ask.price - bid.price;
       if (spread > 0) {
         arbitrage.push({ bid, ask, spread, symbol });
       }
@@ -132,4 +151,102 @@ export function groupArbitrages(arbitrage: Arbitrage[]) {
   });
 
   return groupedData;
+}
+
+export function getMarketGood(
+  marketplace: Marketplace,
+  tradeSymbol: TradeSymbol
+): MarketGood | null {
+  if (!marketplace.tradeGoods) {
+    return null;
+  }
+
+  for (let tradeGood of marketplace.tradeGoods!) {
+    if (tradeGood.symbol === tradeSymbol) {
+      return tradeGood;
+    }
+  }
+
+  return null;
+}
+
+export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
+  console.info(`${ship.symbol}: Running ${arbitrage.symbol} arbitrage.`);
+
+  await navigate(ship.symbol, arbitrage.bid.marketplace.symbol);
+
+  const shipStatus = await getShip(ship.symbol);
+  const currentMarket = await getMarketplace(
+    shipStatus.nav.systemSymbol,
+    shipStatus.nav.waypointSymbol
+  );
+
+  const bidGood = getMarketGood(currentMarket, arbitrage.symbol);
+
+  if (!bidGood) {
+    throw new Error("Bid good no longer sold.");
+  }
+
+  const slippage = bidGood.purchasePrice - arbitrage.bid.price;
+
+  if (slippage !== 0) {
+    console.info(
+      `${ship.symbol}: Bid price slipped from ${arbitrage.bid.price} to ${bidGood?.purchasePrice} (${slippage})`
+    );
+  }
+
+  if (slippage > 0) {
+    // check if still profitable
+    console.log("STIL PROFITABLE?");
+  }
+
+  const invCapacity = shipStatus.cargo.capacity - shipStatus.cargo.units;
+
+  console.info(
+    `${ship.symbol}: Purchase ${invCapacity}x ${arbitrage.symbol} for ${bidGood.purchasePrice}`
+  );
+
+  await dock(ship);
+  const buyResponse = await buy(shipStatus, invCapacity, arbitrage.symbol);
+
+  console.log("buyResponse :>> ", buyResponse);
+
+  await navigate(ship.symbol, arbitrage.ask.marketplace.symbol);
+
+  const shipStatus2 = await getShip(ship.symbol);
+
+  const askMarket = await getMarketplace(
+    shipStatus2.nav.systemSymbol,
+    shipStatus2.nav.waypointSymbol
+  );
+
+  const askGood = getMarketGood(askMarket, arbitrage.symbol);
+
+  if (!askGood) {
+    throw new Error("Ask good no longer sold.");
+  }
+
+  const askSlippage = askGood.purchasePrice - arbitrage.ask.price;
+
+  if (slippage !== 0) {
+    console.info(
+      `${ship.symbol}: Ask price slipped from ${arbitrage.ask.price} to ${askGood?.purchasePrice} (${askSlippage})`
+    );
+  }
+
+  if (slippage < 0) {
+    // check if still profitable
+    console.log("STIL PROFITABLE?");
+  }
+
+  await dock(shipStatus2);
+  const sellResponse = await sell(ship, invCapacity, arbitrage.symbol);
+
+  const pnlperUnit = askGood.purchasePrice - bidGood.sellPrice;
+
+  const pnlTotal = pnlperUnit * invCapacity;
+
+  console.info(
+    `${invCapacity}x ${askGood.purchasePrice} - ${bidGood.sellPrice}= ${pnlTotal} (${pnlperUnit}/u)`
+  );
 }

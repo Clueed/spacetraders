@@ -108,7 +108,7 @@ export class TotalMarket extends TotalMarketStorage {
 
   public getBestPrice(
     tradeSymbol: TradeSymbol,
-    to: "BUY" | "SELL"
+    type: "BID" | "ASK"
   ): Quote | null {
     let options;
 
@@ -129,20 +129,23 @@ export class TotalMarket extends TotalMarketStorage {
     for (let i = 0; i < options.length; i++) {
       const tradeGood = options[i].tradeGood;
 
-      if (to === "BUY" && tradeGood.purchasePrice < (bestPrice ?? Infinity)) {
+      if (type === "BID" && tradeGood.purchasePrice < (bestPrice ?? Infinity)) {
         bestPrice = tradeGood.purchasePrice;
         bestPriceIndex = i;
       }
 
-      if (to === "SELL" && tradeGood.sellPrice > (bestPrice ?? -Infinity)) {
+      if (type === "ASK" && tradeGood.sellPrice > (bestPrice ?? -Infinity)) {
         bestPrice = tradeGood.sellPrice;
         bestPriceIndex = i;
       }
     }
 
     return {
+      type: type,
       price: bestPrice!,
       marketplace: options[bestPriceIndex!].marketplace,
     };
   }
 }
+
+export const totalMarket = new TotalMarket();

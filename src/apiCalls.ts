@@ -5,6 +5,7 @@ import axios from "axios";
 import { sleep } from "./util.js";
 import { Waypoint } from "./types/Waypoint.js";
 import { Marketplace } from "./types/Marketplace.js";
+import { totalMarket } from "./TotalMarket.js";
 
 export async function getShips(): Promise<Ship[]> {
   try {
@@ -235,9 +236,35 @@ export async function getMarketplace(
       `systems/${systemSymbol}/waypoints/${waypointSymbol}/market`
     );
     if (response.status === 200) {
-      return response.data.data;
+      const marketplace: Marketplace = response.data.data;
+      totalMarket.addMarketRecord(marketplace);
+      return marketplace;
     } else {
       throw response;
+    }
+  } catch (error) {
+    throw error;
+  }
+}
+
+export async function _buy(
+  shipSymbol: string,
+  tradeSymbol: TradeSymbol,
+  units: number
+) {
+  try {
+    const response = await apiWrapper(
+      "POST",
+      `my/ships/${shipSymbol}/purchase`,
+      {
+        units: units,
+        symbol: tradeSymbol,
+      }
+    );
+    if (response.status === 201) {
+      return response.data.data;
+    } else {
+      throw new Error(response);
     }
   } catch (error) {
     throw error;
