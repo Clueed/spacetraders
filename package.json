@@ -2,7 +2,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "node --loader ts-node/esm --inspect --trace-uncaught ./src/trade.ts"
+    "dev": "node --loader ts-node/esm --inspect --trace-uncaught ./src/trade.ts",
+    "gen-sdk": "openapi-generator-cli generate -g typescript-axios -o src/spacetraders-sdk -i https://stoplight.io/api/v1/projects/spacetraders/spacetraders/nodes/reference/SpaceTraders.json?fromExportButton=true&snapshotType=http_service&deref=optimizedBundle --additional-properties=npmName=spacetraders-sdk,npmVersion=2.0.0,supportsES6=true,withSeparateModelsAndApi=true,modelPackage=models,apiPackage=api"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -10,6 +11,7 @@
     "p-queue": "^7.3.4"
   },
   "devDependencies": {
+    "@openapitools/openapi-generator-cli": "^2.6.0",
     "@types/node": "^20.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.4"
