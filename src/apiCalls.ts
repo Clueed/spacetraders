@@ -1,7 +1,7 @@
 import { Ship, NavWaypoint } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import { apiWrapper } from "./api.js";
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { sleep } from "./util.js";
 import { Waypoint } from "./types/Waypoint.js";
 import { Marketplace } from "./types/Marketplace.js";
@@ -39,32 +39,39 @@ export async function dock(ship: Ship): Promise<void> {
     console.error(error);
   }
 }
+export async function _navigate(
+  shipSymbol: string,
+  waypointSymbol: string
+): Promise<AxiosResponse> {
+  return await apiWrapper("POST", `my/ships/${shipSymbol}/navigate`, {
+    waypointSymbol: waypointSymbol,
+  });
+}
 
 export async function navigate(
   shipSymbol: string,
   waypointSymbol: string
 ): Promise<void> {
-  let deltaEta = 0;
-
   console.log(`${shipSymbol}: Initialized navigation to ${waypointSymbol}`);
+
   try {
-    const response = await apiWrapper(
-      "POST",
-      `my/ships/${shipSymbol}/navigate`,
-      {
-        waypointSymbol: waypointSymbol,
-      }
-    );
+    const response = await _navigate(shipSymbol, waypointSymbol);
+
     if (response.status === 200) {
       const arrivalDate = new Date(response.data.data.nav.route.arrival);
 
-      deltaEta = arrivalDate.getTime() - new Date().getTime();
+      const deltaEta = arrivalDate.getTime() - new Date().getTime();
 
       const deltaEtaDate = new Date(deltaEta);
       const [etaMinunte, etaSeconds] = [
         deltaEtaDate.getMinutes(),
         deltaEtaDate.getSeconds(),
       ];
+
+      if (deltaEta > 0) {
+        await sleep(deltaEta);
+        console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`);
+      }
 
       const destination = response.data.data.nav.route.destination;
       const departure = response.data.data.nav.route.departure;
@@ -78,11 +85,6 @@ export async function navigate(
       `${shipSymbol}: FAILED TO INITIALIZE NAVIGATION TO ${waypointSymbol}`
     );
     console.error(error);
-  }
-
-  if (deltaEta > 0) {
-    await sleep(deltaEta);
-    console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`);
   }
 }
 
