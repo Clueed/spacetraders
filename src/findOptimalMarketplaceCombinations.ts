@@ -1,6 +1,6 @@
 import { MarketInventoryUnion } from "./findMarketsForItems.js";
 import { Marketplace } from "./types/Marketplace.js";
-import { InventoryGood } from "./types/Ship.js";
+import { InventoryGood } from "./types/Cargo.js";
 import { Waypoint } from "./types/Waypoint.js";
 
 export function selectMarketCombination(

@@ -1,69 +1,83 @@
-import {
-  getMarketplace,
-  getShips,
-  getSystemWaypoits,
-  getWaypoint,
-  navigate,
-} from "./apiCalls.js";
+import { getMarketplace, getShips, getWaypoint, navigate } from "./apiCalls.js";
+import { sell } from "./buySell.js";
 import {
   Quote,
+  autoDock,
   autoRefuel,
   checkArbitrage,
   getInventoryQuantity,
   getShip,
+  i,
   runArbitrage,
-  sell,
 } from "./util.js";
-
+import { info } from "console";
 import { totalMarket } from "./TotalMarket.js";
-import { Waypoint } from "./types/Waypoint.js";
-import { selectMarketCombination } from "./findOptimalMarketplaceCombinations.js";
 import { quicksort } from "./findOptimalMarketplaceCombinations.js";
+import { Waypoint } from "./types/Waypoint.js";
 
 const unique = totalMarket.uniqueItemSymbols();
 
-const arbitrage = checkArbitrage(totalMarket, unique);
+const uniqueWithoutFuel = unique.filter(
+  (tradeSymbol) => tradeSymbol !== "FUEL"
+);
 
-const myShipsAll = await getShips();
+const arbitrage = checkArbitrage(totalMarket, uniqueWithoutFuel);
 
-/*if (myShipsAll[0].cargo.capacity === myShipsAll[0].cargo.units) {
-  const ship = await getShip(myShipsAll[0].symbol);
+const myShips = await getShips();
 
-  let sellingRoute: Waypoint[] = [];
+for (let ship of myShips) {
+  let empty = ship.cargo.units === 0;
 
-  let sellingItems: { [waypointSymbol: string]: Quote[] } = {};
+  while (!empty) {
+    const items = ship.cargo.inventory
+      .map((inventoryGood) => inventoryGood.symbol)
+      .toString();
+    info(i(ship), `Detected items in inventory: ${items}`);
+    info(i(ship), `Initiating inventory sell-off procedure.`);
 
-  for (let tradeItems of ship.cargo.inventory) {
-    const quote = totalMarket.getBestPrice(tradeItems.symbol, "BID");
-    if (quote) {
-      const waypointSymbol = quote.marketplace.symbol;
-      const waypoint = await getWaypoint(waypointSymbol);
+    let sellingRoute: Waypoint[] = [];
 
-      sellingRoute.push(waypoint);
+    let sellingItems: { [waypointSymbol: string]: Quote[] } = {};
 
-      if (sellingItems[waypointSymbol]) {
-        sellingItems[waypointSymbol].push(quote);
-      } else {
-        sellingItems[waypointSymbol] = [quote];
+    for (let tradeItems of ship.cargo.inventory) {
+      const quote = totalMarket.getBestPrice(tradeItems.symbol, "BID");
+      if (quote) {
+        const waypointSymbol = quote.marketplace.symbol;
+        const waypoint = await getWaypoint(waypointSymbol);
+
+        sellingRoute.push(waypoint);
+
+        if (sellingItems[waypointSymbol]) {
+          sellingItems[waypointSymbol].push(quote);
+        } else {
+          sellingItems[waypointSymbol] = [quote];
+        }
       }
     }
-  }
 
-  const optimizedRoute = quicksort(sellingRoute);
+    const optimizedRoute = quicksort(sellingRoute);
 
-  if (ship.nav.waypointSymbol === optimizedRoute[0].symbol) {
-    for (let quote of sellingItems[optimizedRoute[0].symbol]) {
-      const amount = getInventoryQuantity(ship, quote.symbol);
-      await sell(ship, amount, quote.symbol);
+    info(i(ship), `Found optimal route for sell-off.`);
+    info(i(ship), `Executing sell-off.`);
+
+    if (ship.nav.waypointSymbol === optimizedRoute[0].symbol) {
+      for (let quote of sellingItems[optimizedRoute[0].symbol]) {
+        const amount = getInventoryQuantity(ship, quote.symbol);
+        await autoDock(ship);
+        await sell(ship, amount, quote.symbol);
+      }
+    } else {
+      await navigate(ship.symbol, optimizedRoute[0].symbol);
+      const currentMarket = await getMarketplace(
+        optimizedRoute[0].systemSymbol,
+        optimizedRoute[0].symbol
+      );
+      await autoRefuel(currentMarket, ship);
     }
-  } else {
-    await navigate(ship.symbol, optimizedRoute[0].symbol);
-    const currentMarket = await getMarketplace(
-      optimizedRoute[0].systemSymbol,
-      optimizedRoute[0].symbol
-    );
-    await autoRefuel(currentMarket, ship);
-  }
-}*/
 
-runArbitrage(arbitrage[0], myShipsAll[0]);
+    ship = await getShip(ship.symbol);
+    empty = ship.cargo.units === 0;
+  }
+
+  await runArbitrage(arbitrage[0], ship);
+}

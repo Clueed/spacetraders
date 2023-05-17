@@ -73,9 +73,9 @@ export async function apiWrapper(
   url: string,
   data: object | null = null,
   params: object | null = null
-): Promise<any> {
+): Promise<AxiosResponse<any, any>> {
   try {
-    return await queue.add(async () => {
+    const response = await queue.add(async () => {
       return await api.request({
         url,
         method,
@@ -83,6 +83,11 @@ export async function apiWrapper(
         ...(params && { params }),
       });
     });
+
+    if (!response) {
+      throw new Error("No response returned.");
+    }
+    return response;
   } catch (error) {
     if (axios.isAxiosError(error) && error.response) {
       if (

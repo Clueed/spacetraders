@@ -1,4 +1,5 @@
 import { Good, TradeSymbol } from "./Good.js";
+import { Transaction } from "./Transaction.js";
 
 export interface Marketplace {
   symbol: string;
@@ -7,17 +8,6 @@ export interface Marketplace {
   exchange: Good[];
   transactions?: Transaction[];
   tradeGoods?: MarketGood[];
-}
-
-export interface Transaction {
-  waypointSymbol: string;
-  shipSymbol: string;
-  tradeSymbol: TradeSymbol;
-  type: "PURCHASE" | "SELL";
-  units: number;
-  pricePerUnit: number;
-  totalPrice: number;
-  timestamp: string;
 }
 
 export interface MarketGood {

@@ -1,17 +1,18 @@
 import { Ship } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import {
-  _sell,
-  _buy,
   getMarketplace,
   getShips,
   navigate,
   refuel,
   _dock,
 } from "./apiCalls.js";
-import { TraitSymbol, Waypoint } from "./types/Waypoint.js";
+import { Waypoint } from "./types/Waypoint.js";
+import { WaypointTraitSymbol } from "./types/Trait.js";
 import { MarketGood, Marketplace } from "./types/Marketplace.js";
 import { TotalMarket, totalMarket } from "./TotalMarket.js";
+import { buy, sell } from "./buySell.js";
+import { info } from "console";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -57,30 +58,24 @@ export function getInventoryQuantity(ship: Ship, itemSymbol: TradeSymbol) {
   return 0;
 }
 
-export async function sell(
-  ship: Ship,
-  units: number,
-  tradeSymbol: TradeSymbol
-) {
-  await autoDock(ship);
-
-  return await _sell(ship.symbol, units, tradeSymbol);
+export function i(ship: Ship) {
+  return `${ship.symbol} @ ${ship.nav.waypointSymbol}`;
 }
 
-export function log(ship: Ship, message: string) {
+export const logInfo = (ship: Ship, message: string) => {
   console.info(`${ship.symbol} @ ${ship.nav.waypointSymbol}: ${message}`);
-}
+};
 
-export function logError(ship: Ship, error: any) {
+export const logError = (ship: Ship, error: any) => {
   console.error(`${ship.symbol} @ ${ship.nav.waypointSymbol}: ERROR:`);
   console.error(error);
-}
+};
 
 export async function autoDock(ship: Ship) {
   try {
     const response = await _dock(ship.symbol);
     if (response.status === 200) {
-      log(ship, "Docked");
+      logInfo(ship, "Docked");
       return;
     } else {
       logError(ship, response);
@@ -90,18 +85,10 @@ export async function autoDock(ship: Ship) {
   }
 }
 
-export async function buy(ship: Ship, units: number, tradeSymbol: TradeSymbol) {
-  log(ship, `Initiating purchase of ${units}x ${tradeSymbol}`);
-  await autoDock(ship);
-  try {
-    await _buy(ship.symbol, tradeSymbol, units);
-    log(ship, "");
-  } catch (error) {
-    throw error;
-  }
-}
-
-export function filterByTrait(waypoints: Waypoint[], traitSymbol: TraitSymbol) {
+export function filterByTrait(
+  waypoints: Waypoint[],
+  traitSymbol: WaypointTraitSymbol
+) {
   return waypoints.filter((waypoint) => {
     return waypoint.traits.some((waypointTrait) => {
       return waypointTrait.symbol === traitSymbol;
@@ -197,7 +184,11 @@ export function getMarketGood(
 }
 
 export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
-  log(ship, `Running ${arbitrage.symbol} arbitrage.`);
+  logInfo(ship, `Running ${arbitrage.symbol} arbitrage.`);
+
+  const approxPnL = arbitrage.spread * ship.cargo.capacity;
+
+  logInfo(ship, `Estimating profit before fuel of ${approxPnL} per run.`);
 
   for (let trade of ["BUY", "SELL"]) {
     await navigate(
@@ -207,19 +198,19 @@ export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
         : arbitrage.bid.marketplace.symbol
     );
 
-    const shipStatus = await getShip(ship.symbol);
+    ship = await getShip(ship.symbol);
 
     const currentMarket = await getMarketplace(
-      shipStatus.nav.systemSymbol,
-      shipStatus.nav.waypointSymbol
+      ship.nav.systemSymbol,
+      ship.nav.waypointSymbol
     );
 
-    await autoRefuel(currentMarket, shipStatus);
+    await autoRefuel(currentMarket, ship);
 
     const arbitrageGood = getMarketGood(currentMarket, arbitrage.symbol);
 
     if (!arbitrageGood) {
-      throw new Error("Arbitrage good no longer sold here.");
+      throw new Error("Arbitrage good no longer available here.");
       // TODO:
       // If can't purchase return
       // If can't sell, pick next best price even at loss.
@@ -231,27 +222,25 @@ export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
         : arbitrageGood.sellPrice - arbitrage.bid.price;
 
     if (slippage !== 0) {
-      if (trade === "BUY") {
-        return;
-      }
-      console.error("SLIPPING");
+      info(
+        i(ship),
+        `${arbitrage.symbol} ${
+          trade === "BUY" ? "ask" : "bid"
+        } slipped by ${slippage}.`
+      );
+      console.info(i(ship), `Canceling arbitrage execution. Reevaluating.`);
+      return;
     }
 
     if (trade === "BUY") {
-      const inventoryCapacity =
-        shipStatus.cargo.capacity - shipStatus.cargo.units;
+      const inventoryCapacity = ship.cargo.capacity - ship.cargo.units;
 
-      const response = await buy(
-        shipStatus,
-        inventoryCapacity,
-        arbitrage.symbol
-      );
-      console.log("response :>> ", response);
+      const response = await buy(ship, inventoryCapacity, arbitrage.symbol);
     }
 
     if (trade === "SELL") {
-      const amount = getInventoryQuantity(shipStatus, arbitrage.symbol);
-      const response = await sell(shipStatus, amount, arbitrage.symbol);
+      const amount = getInventoryQuantity(ship, arbitrage.symbol);
+      const response = await sell(ship, amount, arbitrage.symbol);
       console.log("response :>> ", response);
     }
   }

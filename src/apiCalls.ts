@@ -2,10 +2,11 @@ import { Ship, NavWaypoint } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import { apiWrapper } from "./api.js";
 import axios, { AxiosError, AxiosResponse, isAxiosError } from "axios";
-import { sleep } from "./util.js";
+import { logInfo, sleep } from "./util.js";
 import { Waypoint } from "./types/Waypoint.js";
 import { Marketplace } from "./types/Marketplace.js";
 import { totalMarket } from "./TotalMarket.js";
+import { BuySellResponse } from "./types/BuySellResponse.js";
 
 export async function getShips(): Promise<Ship[]> {
   let response;
@@ -40,6 +41,8 @@ export async function navigate(
   shipSymbol: string,
   waypointSymbol: string
 ): Promise<void> {
+  console.log(`${shipSymbol}: Initializing navigation to ${waypointSymbol}...`);
+
   try {
     const response = await _navigate(shipSymbol, waypointSymbol);
 
@@ -54,17 +57,17 @@ export async function navigate(
         deltaEtaDate.getSeconds(),
       ];
 
-      if (deltaEta > 0) {
-        await sleep(deltaEta);
-        console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`);
-      }
-
       const destination = response.data.data.nav.route.destination;
       const departure = response.data.data.nav.route.departure;
 
       console.log(
-        `${shipSymbol} @ ${departure.type} ${destination.symbol}: Departing for ${destination.type} ${departure.symbol}. EAT: T-${etaMinunte}:${etaSeconds}`
+        `${shipSymbol} @ ${destination.symbol}: Departing for ${destination.type} ${departure.symbol}. EAT: T-${etaMinunte}:${etaSeconds}`
       );
+
+      if (deltaEta > 0) {
+        await sleep(deltaEta);
+        console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`);
+      }
     }
   } catch (error) {
     if (
@@ -73,6 +76,9 @@ export async function navigate(
       error.response?.data?.error?.code === 4204
     ) {
       // Ship already there
+      console.log(
+        `${shipSymbol}: Cancel navigation, ship is already at ${waypointSymbol}...`
+      );
       return;
     }
     console.error(
@@ -158,40 +164,50 @@ export async function deliverContract(
   }
 }
 
+export async function _buy(
+  shipSymbol: string,
+  tradeSymbol: TradeSymbol,
+  units: number
+): Promise<BuySellResponse> {
+  let response: AxiosResponse<any, any>;
+
+  try {
+    response = await apiWrapper("POST", `my/ships/${shipSymbol}/purchase`, {
+      units: units,
+      symbol: tradeSymbol,
+    });
+  } catch (error) {
+    throw error;
+  }
+
+  if (response.status === 201) {
+    return response.data.data;
+  }
+
+  throw response;
+}
+
 export async function _sell(
   shipSymbol: string,
   units: number,
   tradeSymbol: TradeSymbol
-): Promise<void> {
-  console.log(`${shipSymbol}: Initializing sale`);
+): Promise<BuySellResponse> {
+  let response: AxiosResponse<any, any>;
+
   try {
-    const response = await apiWrapper("POST", `my/ships/${shipSymbol}/sell`, {
+    response = await apiWrapper("POST", `my/ships/${shipSymbol}/sell`, {
       symbol: tradeSymbol,
       units,
     });
-    if (response.status === 201) {
-      const { pricePerUnit, totalPrice, waypointSymbol } =
-        response.data?.data?.transaction;
-      console.log(
-        `${shipSymbol} @ ${waypointSymbol}: Sold ${units}x ${tradeSymbol} for ${totalPrice} (${pricePerUnit}/u).`
-      );
-    } else {
-      console.error(response);
-    }
   } catch (error) {
-    if (
-      axios.isAxiosError(error) &&
-      error?.response?.status === 400 &&
-      error?.response?.data?.error?.code === 4602
-    ) {
-      console.error(
-        `${shipSymbol}: SALE FAILED - Item ${tradeSymbol} not available.`
-      );
-    } else {
-      console.error(`${shipSymbol}: SALE FAILED`);
-      console.error(error);
-    }
+    throw error;
   }
+
+  if (response.status === 201) {
+    return response.data.data;
+  }
+
+  throw response;
 }
 
 export function getSystemSymbolFromWaypointSymbol(
@@ -258,30 +274,6 @@ export async function getMarketplace(
       return marketplace;
     } else {
       throw response;
-    }
-  } catch (error) {
-    throw error;
-  }
-}
-
-export async function _buy(
-  shipSymbol: string,
-  tradeSymbol: TradeSymbol,
-  units: number
-) {
-  try {
-    const response = await apiWrapper(
-      "POST",
-      `my/ships/${shipSymbol}/purchase`,
-      {
-        units: units,
-        symbol: tradeSymbol,
-      }
-    );
-    if (response.status === 201) {
-      return response.data.data;
-    } else {
-      throw new Error(response);
     }
   } catch (error) {
     throw error;

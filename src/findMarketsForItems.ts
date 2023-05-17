@@ -1,6 +1,6 @@
 import { Good } from "./types/Good.js";
 import { Marketplace, MarketGood } from "./types/Marketplace.js";
-import { InventoryGood } from "./types/Ship.js";
+import { InventoryGood } from "./types/Cargo.js";
 
 export type MarketInventoryUnion = {
   marketplace: Marketplace;

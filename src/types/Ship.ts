@@ -1,4 +1,4 @@
-import { Good, TradeSymbol } from "./Good.js";
+import { Cargo } from "./Cargo.js";
 
 export interface Ship {
   symbol: string;
@@ -12,16 +12,6 @@ export interface Ship {
   mounts: Mount[];
   registration: Registration;
   cargo: Cargo;
-}
-
-export type Cargo = {
-  capacity: number;
-  units: number;
-  inventory: InventoryGood[];
-};
-
-export interface InventoryGood extends Good {
-  units: number;
 }
 
 export type Crew = {
