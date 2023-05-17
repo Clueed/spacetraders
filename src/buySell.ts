@@ -1,11 +1,10 @@
 import { Ship } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import { _sell, _buy } from "./apiCalls.js";
-import { Transaction } from "./types/Transaction.js";
 import { isAxiosError } from "axios";
 import { BuySellResponse } from "./types/BuySellResponse.js";
 import { info } from "console";
-import { i, logInfo, autoDock } from "./util.js";
+import { i } from "./util.js";
 
 export async function sell(
   ship: Ship,

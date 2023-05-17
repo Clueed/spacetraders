@@ -232,6 +232,8 @@ export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
       return;
     }
 
+    await autoDock(ship);
+
     if (trade === "BUY") {
       const inventoryCapacity = ship.cargo.capacity - ship.cargo.units;
 
@@ -241,7 +243,6 @@ export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
     if (trade === "SELL") {
       const amount = getInventoryQuantity(ship, arbitrage.symbol);
       const response = await sell(ship, amount, arbitrage.symbol);
-      console.log("response :>> ", response);
     }
   }
   return;
