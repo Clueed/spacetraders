@@ -1,7 +1,7 @@
-import { extract } from "./apiCalls.js";
-import { Ship } from "./types/Ship.js";
-import { sleep } from "./util.js";
-import { sell } from "./buySell.js";
+import { extract } from "../api/apiCalls.js";
+import { Ship } from "../types/Ship.js";
+import { sleep } from "../util.js";
+import { sell } from "../utilities/trade/buySell.js";
 /**
  * Asynchronously extracts cargo from current location until it is full,
  * handling any cooldown periods between extractions.

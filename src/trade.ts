@@ -1,15 +1,20 @@
-import { getMarketplace, getShips, getWaypoint, navigate } from "./apiCalls.js";
-import { sell } from "./buySell.js";
+import {
+  getMarketplace,
+  getShips,
+  getWaypoint,
+  navigate,
+} from "./api/apiCalls.js";
+import { sell } from "./utilities/trade/buySell.js";
 import {
   Quote,
-  autoDock,
-  autoRefuel,
   checkArbitrage,
   getInventoryQuantity,
   getShip,
   i,
-  runArbitrage,
 } from "./util.js";
+import { autoDock } from "./utilities/autoDock.js";
+import { autoRefuel } from "./utilities/autoRefuel.js";
+import { runArbitrage } from "./procedures/runArbitrage.js";
 import { info } from "console";
 import { totalMarket } from "./TotalMarket.js";
 import { quicksort } from "./findOptimalMarketplaceCombinations.js";
