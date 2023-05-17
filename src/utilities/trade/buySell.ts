@@ -1,22 +1,22 @@
-import { Ship } from "../../types/Ship.js";
-import { TradeSymbol } from "../../types/Good.js";
-import { _sell, _buy } from "../../api/apiCalls.js";
-import { isAxiosError } from "axios";
-import { BuySellResponse } from "../../types/BuySellResponse.js";
-import { info } from "console";
-import { i } from "../../util.js";
+import { type Ship } from '../../types/Ship.js'
+import { type TradeSymbol } from '../../types/Good.js'
+import { _sell, _buy } from '../../api/apiCalls.js'
+import { isAxiosError } from 'axios'
+import { type BuySellResponse } from '../../types/BuySellResponse.js'
+import { info } from 'console'
+import { i } from '../../util.js'
 
-export async function sell(
+export async function sell (
   ship: Ship,
   units: number,
   tradeSymbol: TradeSymbol
 ): Promise<BuySellResponse> {
-  console.log(`${ship.symbol}: Initializing sale`);
+  console.log(`${ship.symbol}: Initializing sale`)
 
-  let response: BuySellResponse;
+  let response: BuySellResponse
 
   try {
-    response = await _sell(ship.symbol, units, tradeSymbol);
+    response = await _sell(ship.symbol, units, tradeSymbol)
   } catch (error) {
     if (
       isAxiosError(error) &&
@@ -26,46 +26,40 @@ export async function sell(
       // Not availbale in inventory?
       console.error(
         `${ship.symbol}: SALE FAILED - Item ${tradeSymbol} not available.`
-      );
+      )
     }
-    throw error;
+    throw error
   }
 
-  const { type, pricePerUnit, totalPrice } = response.transaction;
+  const { type, pricePerUnit, totalPrice } = response.transaction
 
-  info(i(ship), `${type} transaction successfull`);
+  info(i(ship), `${type} transaction successfull`)
   info(
     `${units}x ${tradeSymbol} * ${pricePerUnit} = ${
-      type === "SELL" ? "+" : "-"
+      type === 'SELL' ? '+' : '-'
     }${totalPrice}`
-  );
+  )
 
-  return response;
+  return response
 }
 
-export async function buy(
+export async function buy (
   ship: Ship,
   units: number,
   tradeSymbol: TradeSymbol
 ): Promise<BuySellResponse> {
-  console.log(`${ship.symbol}: Initializing purchase`);
+  console.log(`${ship.symbol}: Initializing purchase`)
 
-  let response: BuySellResponse;
+  const response = await _buy(ship.symbol, tradeSymbol, units)
 
-  try {
-    response = await _buy(ship.symbol, tradeSymbol, units);
-  } catch (error) {
-    throw error;
-  }
+  const { type, pricePerUnit, totalPrice } = response.transaction
 
-  const { type, pricePerUnit, totalPrice } = response.transaction;
-
-  info(i(ship), `${type} transaction successfull`);
+  info(i(ship), `${type} transaction successfull`)
   info(
     `${units}x ${tradeSymbol} * ${pricePerUnit} = ${
-      type === "SELL" ? "+" : "-"
+      type === 'SELL' ? '+' : '-'
     }${totalPrice}`
-  );
+  )
 
-  return response;
+  return response
 }

@@ -1,9 +1,9 @@
-import { Agent } from "./Agent.js";
-import { Cargo } from "./Cargo.js";
-import { Transaction } from "./Transaction.js";
+import { type Agent } from './Agent.js'
+import { type Cargo } from './Cargo.js'
+import { type Transaction } from './Transaction.js'
 
 export interface BuySellResponse {
-  agent: Agent;
-  cargo: Cargo;
-  transaction: Transaction;
+  agent: Agent
+  cargo: Cargo
+  transaction: Transaction
 }

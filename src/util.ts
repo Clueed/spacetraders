@@ -1,121 +1,121 @@
-import { Ship } from "./types/Ship.js";
-import { TradeSymbol } from "./types/Good.js";
-import { getMarketplace, getShips } from "./api/apiCalls.js";
-import { Waypoint } from "./types/Waypoint.js";
-import { WaypointTraitSymbol } from "./types/Trait.js";
-import { MarketGood, Marketplace } from "./types/Marketplace.js";
-import { TotalMarket } from "./TotalMarket.js";
+import { type Ship } from './types/Ship.js'
+import { type TradeSymbol } from './types/Good.js'
+import { getMarketplace, getShips } from './api/apiCalls.js'
+import { type Waypoint } from './types/Waypoint.js'
+import { type WaypointTraitSymbol } from './types/Trait.js'
+import { type MarketGood, type Marketplace } from './types/Marketplace.js'
+import { type TotalMarket } from './TotalMarket.js'
 
-export function sleep(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+export async function sleep (ms: number) {
+  return await new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export async function getShipsLocation(queryShips: string[]) {
-  const ships = await getShips();
+export async function getShipsLocation (queryShips: string[]) {
+  const ships = await getShips()
 
-  let shipLocations: any = {};
+  const shipLocations: any = {}
 
   ships.map((ship: any) => {
     if (queryShips.includes(ship.symbol)) {
-      shipLocations[ship.symbol] = ship.nav.waypointSymbol;
+      shipLocations[ship.symbol] = ship.nav.waypointSymbol
     }
 
-    return shipLocations;
-  });
+    return shipLocations
+  })
 }
 
-export async function getShip(shipSymbol: string) {
-  const ships = await getShips();
-  return ships.filter((ship) => ship.symbol === shipSymbol)[0];
+export async function getShip (shipSymbol: string) {
+  const ships = await getShips()
+  return ships.filter((ship) => ship.symbol === shipSymbol)[0]
 }
 
-export function getInventoryQuantity(ship: Ship, itemSymbol: TradeSymbol) {
-  for (let { symbol, units } of ship.cargo.inventory) {
+export function getInventoryQuantity (ship: Ship, itemSymbol: TradeSymbol) {
+  for (const { symbol, units } of ship.cargo.inventory) {
     if (symbol === itemSymbol) {
-      return units;
+      return units
     }
   }
-  return 0;
+  return 0
 }
 
-export function i(ship: Ship) {
-  return `${ship.symbol} @ ${ship.nav.waypointSymbol}`;
+export function i (ship: Ship) {
+  return `${ship.symbol} @ ${ship.nav.waypointSymbol}`
 }
 
-export function filterByTrait(
+export function filterByTrait (
   waypoints: Waypoint[],
   traitSymbol: WaypointTraitSymbol
 ) {
   return waypoints.filter((waypoint) => {
     return waypoint.traits.some((waypointTrait) => {
-      return waypointTrait.symbol === traitSymbol;
-    });
-  });
+      return waypointTrait.symbol === traitSymbol
+    })
+  })
 }
 
-export async function getMarketplacesFromWaypoints(
+export async function getMarketplacesFromWaypoints (
   waypoints: Waypoint[]
 ): Promise<Marketplace[]> {
-  const waypointsWithMarketplaces = filterByTrait(waypoints, "MARKETPLACE");
+  const waypointsWithMarketplaces = filterByTrait(waypoints, 'MARKETPLACE')
 
   const marketplaces = await Promise.all(
     waypointsWithMarketplaces.map(async (waypoint) => {
-      return await getMarketplace(waypoint.systemSymbol, waypoint.symbol);
+      return await getMarketplace(waypoint.systemSymbol, waypoint.symbol)
     })
-  );
-  return marketplaces;
+  )
+  return marketplaces
 }
 
-export type Quote = {
-  symbol: TradeSymbol;
-  price: number;
-  marketplace: Marketplace;
-  type: "ASK" | "BID";
-};
+export interface Quote {
+  symbol: TradeSymbol
+  price: number
+  marketplace: Marketplace
+  type: 'ASK' | 'BID'
+}
 
-export type Arbitrage = {
-  symbol: TradeSymbol;
-  bid: Quote;
-  ask: Quote;
-  spread: number;
-};
+export interface Arbitrage {
+  symbol: TradeSymbol
+  bid: Quote
+  ask: Quote
+  spread: number
+}
 
-export function checkArbitrage(
+export function checkArbitrage (
   totalMarket: TotalMarket,
   tradeSymbols: TradeSymbol[]
 ): Arbitrage[] {
-  let arbitrage: Arbitrage[] = [];
+  const arbitrage: Arbitrage[] = []
 
-  for (let symbol of tradeSymbols) {
-    const ask = totalMarket.getBestPrice(symbol, "ASK");
-    const bid = totalMarket.getBestPrice(symbol, "BID");
+  for (const symbol of tradeSymbols) {
+    const ask = totalMarket.getBestPrice(symbol, 'ASK')
+    const bid = totalMarket.getBestPrice(symbol, 'BID')
 
-    if (ask && bid) {
-      const spread = bid.price - ask.price;
+    if ((ask != null) && (bid != null)) {
+      const spread = bid.price - ask.price
       if (spread > 0) {
-        arbitrage.push({ bid, ask, spread, symbol });
+        arbitrage.push({ bid, ask, spread, symbol })
       }
     }
   }
 
-  arbitrage.sort((a, b) => b.spread - a.spread);
+  arbitrage.sort((a, b) => b.spread - a.spread)
 
-  return arbitrage;
+  return arbitrage
 }
 
-export function getMarketGood(
+export function getMarketGood (
   marketplace: Marketplace,
   tradeSymbol: TradeSymbol
 ): MarketGood | null {
-  if (!marketplace.tradeGoods) {
-    return null;
+  if (marketplace.tradeGoods == null) {
+    return null
   }
 
-  for (let tradeGood of marketplace.tradeGoods!) {
+  for (const tradeGood of marketplace.tradeGoods) {
     if (tradeGood.symbol === tradeSymbol) {
-      return tradeGood;
+      return tradeGood
     }
   }
 
-  return null;
+  return null
 }

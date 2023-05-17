@@ -1,72 +1,70 @@
-import { Ship, NavWaypoint } from "../types/Ship.js";
-import { TradeSymbol } from "../types/Good.js";
-import { apiQueueWrapper } from "./queueWrapper.js";
-import axios, { AxiosError, AxiosResponse, isAxiosError } from "axios";
-import { sleep } from "../util.js";
-import { Waypoint } from "../types/Waypoint.js";
-import { Marketplace } from "../types/Marketplace.js";
-import { totalMarket } from "../TotalMarket.js";
-import { BuySellResponse } from "../types/BuySellResponse.js";
+import axios, { isAxiosError, type AxiosError, type AxiosResponse } from 'axios'
+import { totalMarket } from '../TotalMarket.js'
+import { type BuySellResponse } from '../types/BuySellResponse.js'
+import { type TradeSymbol } from '../types/Good.js'
+import { type Marketplace } from '../types/Marketplace.js'
+import { type Ship } from '../types/Ship.js'
+import { type Waypoint } from '../types/Waypoint.js'
+import { sleep } from '../util.js'
+import { apiQueueWrapper } from './queueWrapper.js'
 
-export async function getShips(): Promise<Ship[]> {
-  let response;
-  try {
-    response = await apiQueueWrapper("GET", "my/ships");
-  } catch (error) {
-    throw error;
-  }
+export async function getShips (): Promise<Ship[]> {
+  const response = await apiQueueWrapper('GET', 'my/ships')
+
   if (response?.status === 200) {
-    return response.data.data;
+    return response.data.data
   } else {
-    console.error(response);
-    return response.data.data;
+    console.error(response)
+    return response.data.data
   }
 }
 
-export async function _dock(
+export async function dock (
   shipSymbol: string
-): Promise<AxiosResponse | AxiosError> {
-  return await apiQueueWrapper("POST", `my/ships/${shipSymbol}/dock`);
+): Promise<void> {
+  const response = await apiQueueWrapper('POST', `my/ships/${shipSymbol}/dock`)
+  console.log('Docking response :>> ', response)
 }
-export async function _navigate(
+
+export async function _navigate (
   shipSymbol: string,
   waypointSymbol: string
 ): Promise<AxiosResponse> {
-  return await apiQueueWrapper("POST", `my/ships/${shipSymbol}/navigate`, {
-    waypointSymbol: waypointSymbol,
-  });
+  return await apiQueueWrapper('POST', `my/ships/${shipSymbol}/navigate`, {
+    waypointSymbol
+  })
 }
 
-export async function navigate(
+export async function navigate (
   shipSymbol: string,
   waypointSymbol: string
 ): Promise<void> {
-  console.log(`${shipSymbol}: Initializing navigation to ${waypointSymbol}...`);
+  console.log(`${shipSymbol}: Initializing navigation to ${waypointSymbol}...`)
 
   try {
-    const response = await _navigate(shipSymbol, waypointSymbol);
+    const response = await _navigate(shipSymbol, waypointSymbol)
 
     if (response.status === 200) {
-      const arrivalDate = new Date(response.data.data.nav.route.arrival);
+      const arrivalDate = new Date(response.data.data.nav.route.arrival)
 
-      const deltaEta = arrivalDate.getTime() - new Date().getTime();
+      const deltaEta = arrivalDate.getTime() - new Date().getTime()
 
-      const deltaEtaDate = new Date(deltaEta);
+      const deltaEtaDate = new Date(deltaEta)
       const [etaMinunte, etaSeconds] = [
         deltaEtaDate.getMinutes(),
-        deltaEtaDate.getSeconds(),
-      ];
+        deltaEtaDate.getSeconds()
+      ]
 
-      const destination = response.data.data.nav.route.destination;
-      const departure = response.data.data.nav.route.departure;
+      const destination = response.data.data.nav.route.destination
+      const departure = response.data.data.nav.route.departure
 
       console.log(
         `${shipSymbol} @ ${destination.symbol}: Departing for ${destination.type} ${departure.symbol}. EAT: T-${etaMinunte}:${etaSeconds}`
-      );
+      )
 
       if (deltaEta > 0) {
-        await sleep(deltaEta);
-        console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`);
+        await sleep(deltaEta)
+        console.log(`${shipSymbol}: Arrived at ${waypointSymbol}`)
       }
     }
   } catch (error) {
@@ -78,214 +76,184 @@ export async function navigate(
       // Ship already there
       console.log(
         `${shipSymbol}: Cancel navigation, ship is already at ${waypointSymbol}...`
-      );
-      return;
+      )
+      return
     }
     console.error(
       `${shipSymbol}: FAILED TO INITIALIZE NAVIGATION TO ${waypointSymbol}`
-    );
-    console.error(error);
+    )
+    console.error(error)
   }
 }
 
-export async function extract(
+export async function extract (
   shipSymbol: string
-): Promise<{ cooldown: number; full: boolean }> {
-  console.log(`${shipSymbol}: Initializing extraction...`);
+): Promise<{ cooldown: number, full: boolean }> {
+  console.log(`${shipSymbol}: Initializing extraction...`)
 
-  let cooldown: number = 0;
-  let full: boolean = false;
+  let cooldown: number = 0
+  let full: boolean = false
 
   try {
     const response = await apiQueueWrapper(
-      "POST",
+      'POST',
       `my/ships/${shipSymbol}/extract`
-    );
+    )
 
     if (response.status === 201) {
-      const data = response.data.data;
+      const data = response.data.data
       console.log(
         `${data.extraction.shipSymbol} extracted ${data.extraction.yield.units}x ${data.extraction.yield.symbol}`
-      );
-      cooldown = parseInt(data.cooldown.remainingSeconds) * 1000;
+      )
+      cooldown = parseInt(data.cooldown.remainingSeconds) * 1000
     }
   } catch (error) {
     if (axios.isAxiosError(error) && error?.response?.status === 400) {
-      console.log(`${shipSymbol}: At max capacity.`);
-      full = true;
+      console.log(`${shipSymbol}: At max capacity.`)
+      full = true
     } else {
-      console.error(`${shipSymbol}: EXTRACTION FAILED`);
-      throw error;
+      console.error(`${shipSymbol}: EXTRACTION FAILED`)
+      throw error
     }
   }
 
-  return { cooldown, full };
+  return { cooldown, full }
 }
 
-export async function refuel(shipSymbol: string) {
-  console.log(`${shipSymbol}: Initializing refueling...`);
+export async function refuel (shipSymbol: string): Promise<void> {
+  console.log(`${shipSymbol}: Initializing refueling...`)
   try {
     const response = await apiQueueWrapper(
-      "POST",
+      'POST',
       `my/ships/${shipSymbol}/refuel`
-    );
+    )
     if (response.status === 200) {
-      console.log(`${shipSymbol}: Refueling complete.`);
+      console.log(`${shipSymbol}: Refueling complete.`)
     } else {
-      console.error(response);
+      console.error(response)
     }
   } catch (error) {
-    console.error(`${shipSymbol}: REFUELING FAILED`);
-    console.error(error);
+    console.error(`${shipSymbol}: REFUELING FAILED`)
+    console.error(error)
   }
 }
 
-export async function deliverContract(
+export async function deliverContract (
   contractId: string,
   shipSymbol: string,
   tradeSymbol: TradeSymbol,
   units: number
 ): Promise<void> {
-  console.log(`${shipSymbol}: Initializing contract delivery...`);
+  console.log(`${shipSymbol}: Initializing contract delivery...`)
   try {
     const response = await apiQueueWrapper(
-      "POST",
+      'POST',
       `my/contracts/${contractId}/deliver`,
       {
-        shipSymbol: shipSymbol,
-        tradeSymbol: tradeSymbol,
-        units: units,
+        shipSymbol,
+        tradeSymbol,
+        units
       }
-    );
+    )
     if (response.status === 200) {
       console.log(
         `${shipSymbol} @ ${tradeSymbol}: delivered ${units}x to contract ${contractId}`
-      );
+      )
     } else {
-      console.error(response);
+      console.error(response)
     }
   } catch (error) {
-    console.error(`${shipSymbol}: DELIVERY FAILED`);
-    console.error(error);
+    console.error(`${shipSymbol}: DELIVERY FAILED`)
+    console.error(error)
   }
 }
 
-export async function _buy(
+export async function _buy (
   shipSymbol: string,
   tradeSymbol: TradeSymbol,
   units: number
 ): Promise<BuySellResponse> {
-  let response: AxiosResponse<any, any>;
-
-  try {
-    response = await apiQueueWrapper(
-      "POST",
+  const response = await apiQueueWrapper(
+    'POST',
       `my/ships/${shipSymbol}/purchase`,
       {
-        units: units,
-        symbol: tradeSymbol,
+        units,
+        symbol: tradeSymbol
       }
-    );
-  } catch (error) {
-    throw error;
-  }
+  )
 
-  if (response.status === 201) {
-    return response.data.data;
-  }
-
-  throw response;
+  return response.data.data
 }
 
-export async function _sell(
+export async function _sell (
   shipSymbol: string,
   units: number,
   tradeSymbol: TradeSymbol
 ): Promise<BuySellResponse> {
-  let response: AxiosResponse<any, any>;
+  const response = await apiQueueWrapper('POST', `my/ships/${shipSymbol}/sell`, {
+    symbol: tradeSymbol,
+    units
+  })
 
-  try {
-    response = await apiQueueWrapper("POST", `my/ships/${shipSymbol}/sell`, {
-      symbol: tradeSymbol,
-      units,
-    });
-  } catch (error) {
-    throw error;
-  }
-
-  if (response.status === 201) {
-    return response.data.data;
-  }
-
-  throw response;
+  return response.data.data
 }
 
-export function getSystemSymbolFromWaypointSymbol(
+export function getSystemSymbolFromWaypointSymbol (
   waypointSymbol: string
 ): string {
-  const [galaxy, system, waypoint] = waypointSymbol.split("-");
-  return galaxy + "-" + system;
+  const [galaxy, system] = waypointSymbol.split('-')
+  return galaxy + '-' + system
 }
 
-export async function getWaypoint(waypointSymbol: string): Promise<Waypoint> {
-  const systemSymbol = getSystemSymbolFromWaypointSymbol(waypointSymbol);
+export async function getWaypoint (waypointSymbol: string): Promise<Waypoint> {
+  const systemSymbol = getSystemSymbolFromWaypointSymbol(waypointSymbol)
 
-  try {
-    const response = await apiQueueWrapper(
-      "GET",
+  const response = await apiQueueWrapper(
+    'GET',
       `systems/${systemSymbol}/waypoints/${waypointSymbol}`
-    );
-    return response.data.data;
-  } catch (error) {
-    throw error;
-  }
+  )
+  return response.data.data
 }
 
-export async function getSystemWaypoits(
+export async function getSystemWaypoits (
   systemSymbol: string
 ): Promise<Waypoint[]> {
-  let waypoints = [];
-  let page = 1;
+  const waypoints = []
+  let page = 1
 
   while (true) {
     try {
       const response = await apiQueueWrapper(
-        "GET",
+        'GET',
         `systems/${systemSymbol}/waypoints?page=${page}&limit=20`
-      );
+      )
 
       if (response.data.data.length === 0) {
-        break;
+        break
       }
 
-      waypoints.push(...response.data.data);
+      waypoints.push(...response.data.data)
     } catch (error) {
-      console.error(error);
+      console.error(error)
     }
 
-    page++;
+    page++
   }
 
-  return waypoints;
+  return waypoints
 }
 
-export async function getMarketplace(
+export async function getMarketplace (
   systemSymbol: string,
   waypointSymbol: string
 ): Promise<Marketplace> {
-  try {
-    const response = await apiQueueWrapper(
-      "GET",
+  const response = await apiQueueWrapper(
+    'GET',
       `systems/${systemSymbol}/waypoints/${waypointSymbol}/market`
-    );
-    if (response.status === 200) {
-      const marketplace: Marketplace = response.data.data;
-      totalMarket.addMarketRecord(marketplace);
-      return marketplace;
-    } else {
-      throw response;
-    }
-  } catch (error) {
-    throw error;
-  }
+  )
+  const marketplace: Marketplace = response.data.data
+
+  totalMarket.addMarketRecord(marketplace)
+
+  return marketplace
 }

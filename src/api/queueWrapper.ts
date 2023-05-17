@@ -1,28 +1,28 @@
-import axios, { AxiosResponse } from "axios";
-import PQueue from "p-queue";
-import { sleep } from "../util.js";
-import { api } from "./api.js";
+import axios, { type AxiosResponse } from 'axios'
+import PQueue from 'p-queue'
+import { sleep } from '../util.js'
+import { api } from './api.js'
 
-const QUEUE_VERBOSE = false;
+const QUEUE_VERBOSE = false
 
-const queue = new PQueue({ concurrency: 1, intervalCap: 1, interval: 2000 });
+const queue = new PQueue({ concurrency: 1, intervalCap: 1, interval: 2000 })
 
 if (QUEUE_VERBOSE) {
-  queue.on("add", (item) => {
+  queue.on('add', (item) => {
     console.log(
       `Task is added.  Size: ${queue.size}  Pending: ${queue.pending} - ${item}`
-    );
-  });
+    )
+  })
 
-  queue.on("next", () => {
+  queue.on('next', () => {
     console.log(
       `Task is completed.  Size: ${queue.size}  Pending: ${queue.pending}`
-    );
-  });
+    )
+  })
 }
 
-export async function apiQueueWrapper(
-  method: "GET" | "POST",
+export async function apiQueueWrapper (
+  method: 'GET' | 'POST',
   url: string,
   data: object | null = null,
   params: object | null = null
@@ -32,27 +32,27 @@ export async function apiQueueWrapper(
       return await api.request({
         url,
         method,
-        ...(data && { data }),
-        ...(params && { params }),
-      });
-    });
+        ...((data != null) && { data }),
+        ...((params != null) && { params })
+      })
+    })
 
-    if (!response) {
-      throw new Error("No response returned.");
+    if (response == null) {
+      throw new Error('No response returned.')
     }
-    return response;
+    return response
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response) {
+    if (axios.isAxiosError(error) && (error.response != null)) {
       if (
         error.response.status === 400 &&
         error.response.data.error?.code === 4214
       ) {
         // Ship in transit
-        const deltaEta = error.response.data.error.data.secondsToArrival * 1000;
+        const deltaEta = error.response.data.error.data.secondsToArrival * 1000
 
-        console.log(`[IT] Waiting ${deltaEta} seconds...`);
-        sleep(deltaEta);
-        return apiQueueWrapper(method, url, data);
+        console.log(`[IT] Waiting ${deltaEta} seconds...`)
+        await sleep(deltaEta)
+        return await apiQueueWrapper(method, url, data)
       }
 
       if (
@@ -61,13 +61,13 @@ export async function apiQueueWrapper(
       ) {
         // Ship action is still on cooldown
         const cooldown =
-          error.response.data.error.data.cooldown.remainingSeconds * 1000;
+          error.response.data.error.data.cooldown.remainingSeconds * 1000
 
-        console.log(`[CD] Waiting ${cooldown} seconds...`);
-        await sleep(cooldown);
-        return apiQueueWrapper(method, url, data);
+        console.log(`[CD] Waiting ${cooldown} seconds...`)
+        await sleep(cooldown)
+        return await apiQueueWrapper(method, url, data)
       }
     }
-    throw error;
+    throw error
   }
 }
