@@ -61,7 +61,7 @@ export async function runArbitrage (arbitrage: Arbitrage, ship: Ship): Promise<v
       return
     }
 
-    await dock(ship)
+    await dock(ship.symbol)
 
     if (trade === 'BUY') {
       const inventoryCapacity = ship.cargo.capacity - ship.cargo.units

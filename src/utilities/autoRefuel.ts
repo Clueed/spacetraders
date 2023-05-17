@@ -24,7 +24,7 @@ export async function autoRefuel (
     console.info(
       `${ship.symbol} @ ${ship.nav.systemSymbol}: Refuelling at ${fuelMarkup}% markup.`
     )
-    await dock(ship)
+    await dock(ship.symbol)
     await refuel(ship.symbol)
   }
 }

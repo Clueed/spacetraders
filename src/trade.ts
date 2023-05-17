@@ -1,4 +1,5 @@
 import {
+  dock,
   getMarketplace,
   getShips,
   getWaypoint,
@@ -12,7 +13,6 @@ import {
   getShip,
   i
 } from './util.js'
-import { dock } from './utilities/autoDock.js'
 import { autoRefuel } from './utilities/autoRefuel.js'
 import { runArbitrage } from './procedures/runArbitrage.js'
 import { info } from 'console'
@@ -70,7 +70,7 @@ while (true) {
       if (ship.nav.waypointSymbol === optimizedRoute[0].symbol) {
         for (const quote of sellingItems[optimizedRoute[0].symbol]) {
           const amount = getInventoryQuantity(ship, quote.symbol)
-          await dock(ship)
+          await dock(ship.symbol)
           await sell(ship, amount, quote.symbol)
         }
       } else {

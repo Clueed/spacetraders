@@ -1,4 +1,4 @@
-import axios, { isAxiosError, type AxiosError, type AxiosResponse } from 'axios'
+import axios, { isAxiosError, type AxiosResponse } from 'axios'
 import { totalMarket } from '../TotalMarket.js'
 import { type BuySellResponse } from '../types/BuySellResponse.js'
 import { type TradeSymbol } from '../types/Good.js'
@@ -21,9 +21,8 @@ export async function getShips (): Promise<Ship[]> {
 
 export async function dock (
   shipSymbol: string
-): Promise<void> {
-  const response = await apiQueueWrapper('POST', `my/ships/${shipSymbol}/dock`)
-  console.log('Docking response :>> ', response)
+): Promise<AxiosResponse<any, any>> {
+  return await apiQueueWrapper('POST', `my/ships/${shipSymbol}/dock`)
 }
 
 export async function _navigate (

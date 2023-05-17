@@ -16,15 +16,23 @@ class TotalMarketStorage {
   }
 
   private loadRegistryFromFile (): void {
+    console.debug('TotalMarketStorage: Loading market registry from file.')
+
     try {
       const data = fs.readFileSync(this.filePath, 'utf8')
       this.MarketRegistry = JSON.parse(data)
     } catch (error) {
       console.log(`Error loading market registry from file: ${error}`)
     }
+
+    const entryCount = Object.keys(this.MarketRegistry).map((key) => this.MarketRegistry[key].length).reduce((a, b) => a + b)
+    console.debug(`TotalMarketStorage: ${entryCount} entries have been recoded.`)
   }
 
   saveRegistryToFile (): void {
+    console.debug('TotalMarketStorage: Saving market registry to file.')
+    const entryCount = Object.keys(this.MarketRegistry).map((key) => this.MarketRegistry[key].length).reduce((a, b) => a + b)
+    console.debug(`TotalMarketStorage: ${entryCount} entries have been recoded.`)
     try {
       fs.writeFileSync(
         this.filePath,
@@ -39,8 +47,8 @@ class TotalMarketStorage {
 
 export class TotalMarket extends TotalMarketStorage {
   public addMarketRecord (marketplace: Marketplace): void {
-    if (marketplace.tradeGoods != null) {
-      if (Object.keys(this.MarketRegistry).includes(marketplace.symbol)) {
+    if (marketplace.tradeGoods !== undefined) {
+      if (!Object.keys(this.MarketRegistry).includes(marketplace.symbol)) {
         this.MarketRegistry[marketplace.symbol] = []
       }
 
@@ -49,6 +57,12 @@ export class TotalMarket extends TotalMarketStorage {
         marketplace
       })
       this.saveRegistryToFile()
+
+      const marketSymbol = marketplace.symbol
+      console.debug(`TotalMarketStorage: Added market entry for ${marketSymbol}`)
+
+      const entryCount = Object.keys(this.MarketRegistry).map((key) => this.MarketRegistry[key].length).reduce((a, b) => a + b)
+      console.debug(`TotalMarketStorage: ${entryCount} entries have been recoded.`)
     } else {
       throw new Error('Only markets with trade goods can be recorded.')
     }
@@ -67,12 +81,10 @@ export class TotalMarket extends TotalMarketStorage {
   }
 
   public uniqueItemSymbols (): TradeSymbol[] {
-    // let uniqueSymbols: TradeSymbol[] = [];
-
     const uniqueSymbols = new Set<TradeSymbol>()
 
     for (const marketplace of this.lastRecords()) {
-      for (const tradeGood of marketplace.tradeGoods) {
+      for (const tradeGood of marketplace.tradeGoods!) {
         uniqueSymbols.add(tradeGood.symbol)
       }
     }

@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios'
+import axios from 'axios'
 import * as dotenv from 'dotenv'
 import { sleep } from '../util.js'
 dotenv.config()
