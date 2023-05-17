@@ -28,7 +28,7 @@ api.interceptors.response.use(
     return response;
   },
   async function (error) {
-    if (error.response.status === 408 || error.code === "ECONNABORTED") {
+    if (error.response?.status === 408 || error.code === "ECONNABORTED") {
       console.log(`[TO] Waiting ${retry} seconds...`);
       await sleep(retry * 1000);
       if (retry < MAX_RETRY) {

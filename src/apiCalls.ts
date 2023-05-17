@@ -1,43 +1,31 @@
 import { Ship, NavWaypoint } from "./types/Ship.js";
 import { TradeSymbol } from "./types/Good.js";
 import { apiWrapper } from "./api.js";
-import axios, { AxiosResponse } from "axios";
+import axios, { AxiosError, AxiosResponse, isAxiosError } from "axios";
 import { sleep } from "./util.js";
 import { Waypoint } from "./types/Waypoint.js";
 import { Marketplace } from "./types/Marketplace.js";
 import { totalMarket } from "./TotalMarket.js";
 
 export async function getShips(): Promise<Ship[]> {
+  let response;
   try {
-    const response = await apiWrapper("GET", "my/ships");
-    if (response.status === 200) {
-      return response.data.data;
-    } else {
-      console.error(response);
-      return response.data.data;
-    }
+    response = await apiWrapper("GET", "my/ships");
   } catch (error) {
     throw error;
   }
+  if (response?.status === 200) {
+    return response.data.data;
+  } else {
+    console.error(response);
+    return response.data.data;
+  }
 }
 
-export async function dock(ship: Ship): Promise<void> {
-  const shipSymbol = ship.symbol;
-
-  if (ship.nav.status === "DOCKED") {
-    return;
-  }
-
-  console.log(`${shipSymbol}: Docking...`);
-  try {
-    const response = await apiWrapper("POST", `my/ships/${shipSymbol}/dock`);
-    if (response.status === 200) {
-      console.log(`${shipSymbol}: Docked`);
-    }
-  } catch (error) {
-    console.error(`${shipSymbol}: DOCKING FAILED`);
-    console.error(error);
-  }
+export async function _dock(
+  shipSymbol: string
+): Promise<AxiosResponse | AxiosError> {
+  return await apiWrapper("POST", `my/ships/${shipSymbol}/dock`);
 }
 export async function _navigate(
   shipSymbol: string,
@@ -52,8 +40,6 @@ export async function navigate(
   shipSymbol: string,
   waypointSymbol: string
 ): Promise<void> {
-  console.log(`${shipSymbol}: Initialized navigation to ${waypointSymbol}`);
-
   try {
     const response = await _navigate(shipSymbol, waypointSymbol);
 
@@ -81,6 +67,14 @@ export async function navigate(
       );
     }
   } catch (error) {
+    if (
+      isAxiosError(error) &&
+      error.response?.status === 400 &&
+      error.response?.data?.error?.code === 4204
+    ) {
+      // Ship already there
+      return;
+    }
     console.error(
       `${shipSymbol}: FAILED TO INITIALIZE NAVIGATION TO ${waypointSymbol}`
     );
@@ -197,6 +191,27 @@ export async function _sell(
       console.error(`${shipSymbol}: SALE FAILED`);
       console.error(error);
     }
+  }
+}
+
+export function getSystemSymbolFromWaypointSymbol(
+  waypointSymbol: string
+): string {
+  const [galaxy, system, waypoint] = waypointSymbol.split("-");
+  return galaxy + "-" + system;
+}
+
+export async function getWaypoint(waypointSymbol: string): Promise<Waypoint> {
+  const systemSymbol = getSystemSymbolFromWaypointSymbol(waypointSymbol);
+
+  try {
+    const response = await apiWrapper(
+      "GET",
+      `systems/${systemSymbol}/waypoints/${waypointSymbol}`
+    );
+    return response.data.data;
+  } catch (error) {
+    throw error;
   }
 }
 

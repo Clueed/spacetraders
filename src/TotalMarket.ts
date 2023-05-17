@@ -64,7 +64,8 @@ export class TotalMarket extends TotalMarketStorage {
     let lastRecords: Marketplace[] = [];
 
     for (let marketSymbol of Object.keys(this.MarketRegistry)) {
-      const lastRecord = this.MarketRegistry[marketSymbol][0];
+      const lastIndex = this.MarketRegistry[marketSymbol].length - 1;
+      const lastRecord = this.MarketRegistry[marketSymbol][lastIndex];
       lastRecords.push(lastRecord.marketplace);
     }
 
@@ -129,12 +130,12 @@ export class TotalMarket extends TotalMarketStorage {
     for (let i = 0; i < options.length; i++) {
       const tradeGood = options[i].tradeGood;
 
-      if (type === "BID" && tradeGood.purchasePrice < (bestPrice ?? Infinity)) {
+      if (type === "ASK" && tradeGood.purchasePrice < (bestPrice ?? Infinity)) {
         bestPrice = tradeGood.purchasePrice;
         bestPriceIndex = i;
       }
 
-      if (type === "ASK" && tradeGood.sellPrice > (bestPrice ?? -Infinity)) {
+      if (type === "BID" && tradeGood.sellPrice > (bestPrice ?? -Infinity)) {
         bestPrice = tradeGood.sellPrice;
         bestPriceIndex = i;
       }
@@ -144,6 +145,7 @@ export class TotalMarket extends TotalMarketStorage {
       type: type,
       price: bestPrice!,
       marketplace: options[bestPriceIndex!].marketplace,
+      symbol: tradeSymbol,
     };
   }
 }

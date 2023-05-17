@@ -1,61 +1,69 @@
 import {
-  deliverContract,
-  dock,
   getMarketplace,
   getShips,
   getSystemWaypoits,
+  getWaypoint,
   navigate,
-  refuel,
 } from "./apiCalls.js";
-import { findMarketsForItems } from "./findMarketsForItems.js";
 import {
-  quicksort,
-  selectMarketCombination,
-} from "./findOptimalMarketplaceCombinations.js";
-import { extractTillFullProcedure, inTransitProcedure } from "./procedures.js";
-import { TradeSymbol } from "./types/Good.js";
-import { Waypoint } from "./types/Waypoint.js";
-import {
+  Quote,
+  autoRefuel,
   checkArbitrage,
-  filterByTrait,
   getInventoryQuantity,
-  getMarketInfo,
   getShip,
-  groupArbitrages,
   runArbitrage,
   sell,
 } from "./util.js";
 
 import { totalMarket } from "./TotalMarket.js";
+import { Waypoint } from "./types/Waypoint.js";
+import { selectMarketCombination } from "./findOptimalMarketplaceCombinations.js";
+import { quicksort } from "./findOptimalMarketplaceCombinations.js";
 
 const unique = totalMarket.uniqueItemSymbols();
 
 const arbitrage = checkArbitrage(totalMarket, unique);
 
-const groupedArbitrage = groupArbitrages(arbitrage);
-
-console.log("arbitrage :>> ", groupedArbitrage);
-
 const myShipsAll = await getShips();
 
-//await navigate(myShipsAll[0].symbol, "X1-ZA40-68707C");
-/*
+/*if (myShipsAll[0].cargo.capacity === myShipsAll[0].cargo.units) {
+  const ship = await getShip(myShipsAll[0].symbol);
 
-const marktplaceWaypoints = filterByTrait(waypoints, "MARKETPLACE");
+  let sellingRoute: Waypoint[] = [];
 
-const route = quicksort(marktplaceWaypoints);
+  let sellingItems: { [waypointSymbol: string]: Quote[] } = {};
 
-for (let waypoint of route) {
-  await navigate(myShipsAll[0].symbol, waypoint.symbol);
+  for (let tradeItems of ship.cargo.inventory) {
+    const quote = totalMarket.getBestPrice(tradeItems.symbol, "BID");
+    if (quote) {
+      const waypointSymbol = quote.marketplace.symbol;
+      const waypoint = await getWaypoint(waypointSymbol);
 
-  const marketplace = await getMarketplace(
-    waypoint.systemSymbol,
-    waypoint.symbol
-  );
+      sellingRoute.push(waypoint);
 
-  totalmarket.addMarketRecord(marketplace);
+      if (sellingItems[waypointSymbol]) {
+        sellingItems[waypointSymbol].push(quote);
+      } else {
+        sellingItems[waypointSymbol] = [quote];
+      }
+    }
+  }
+
+  const optimizedRoute = quicksort(sellingRoute);
+
+  if (ship.nav.waypointSymbol === optimizedRoute[0].symbol) {
+    for (let quote of sellingItems[optimizedRoute[0].symbol]) {
+      const amount = getInventoryQuantity(ship, quote.symbol);
+      await sell(ship, amount, quote.symbol);
+    }
+  } else {
+    await navigate(ship.symbol, optimizedRoute[0].symbol);
+    const currentMarket = await getMarketplace(
+      optimizedRoute[0].systemSymbol,
+      optimizedRoute[0].symbol
+    );
+    await autoRefuel(currentMarket, ship);
+  }
 }*/
-
-console.log("totalmarket :>> ", totalMarket);
 
 runArbitrage(arbitrage[0], myShipsAll[0]);

@@ -1,16 +1,17 @@
 import { Ship } from "./types/Ship.js";
-import { Good, TradeSymbol } from "./types/Good.js";
+import { TradeSymbol } from "./types/Good.js";
 import {
   _sell,
   _buy,
-  dock,
   getMarketplace,
   getShips,
   navigate,
+  refuel,
+  _dock,
 } from "./apiCalls.js";
-import { Trait, TraitSymbol, Waypoint } from "./types/Waypoint.js";
+import { TraitSymbol, Waypoint } from "./types/Waypoint.js";
 import { MarketGood, Marketplace } from "./types/Marketplace.js";
-import { TotalMarket } from "./TotalMarket.js";
+import { TotalMarket, totalMarket } from "./TotalMarket.js";
 export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -61,19 +62,43 @@ export async function sell(
   units: number,
   tradeSymbol: TradeSymbol
 ) {
-  if (ship.nav.status === "IN_ORBIT") {
-    await dock(ship);
-  }
+  await autoDock(ship);
 
   return await _sell(ship.symbol, units, tradeSymbol);
 }
 
-export async function buy(ship: Ship, units: number, tradeSymbol: TradeSymbol) {
-  if (ship.nav.status === "IN_ORBIT") {
-    await dock(ship);
-  }
+export function log(ship: Ship, message: string) {
+  console.info(`${ship.symbol} @ ${ship.nav.waypointSymbol}: ${message}`);
+}
 
-  return await _buy(ship.symbol, tradeSymbol, units);
+export function logError(ship: Ship, error: any) {
+  console.error(`${ship.symbol} @ ${ship.nav.waypointSymbol}: ERROR:`);
+  console.error(error);
+}
+
+export async function autoDock(ship: Ship) {
+  try {
+    const response = await _dock(ship.symbol);
+    if (response.status === 200) {
+      log(ship, "Docked");
+      return;
+    } else {
+      logError(ship, response);
+    }
+  } catch (error) {
+    logError(ship, error);
+  }
+}
+
+export async function buy(ship: Ship, units: number, tradeSymbol: TradeSymbol) {
+  log(ship, `Initiating purchase of ${units}x ${tradeSymbol}`);
+  await autoDock(ship);
+  try {
+    await _buy(ship.symbol, tradeSymbol, units);
+    log(ship, "");
+  } catch (error) {
+    throw error;
+  }
 }
 
 export function filterByTrait(waypoints: Waypoint[], traitSymbol: TraitSymbol) {
@@ -98,6 +123,7 @@ export async function getMarketInfo(
 }
 
 export type Quote = {
+  symbol: TradeSymbol;
   price: number;
   marketplace: Marketplace;
   type: "ASK" | "BID";
@@ -120,7 +146,7 @@ export function checkArbitrage(
     const ask = totalMarket.getBestPrice(symbol, "ASK");
     const bid = totalMarket.getBestPrice(symbol, "BID");
     if (ask && bid) {
-      const spread = ask.price - bid.price;
+      const spread = bid.price - ask.price;
       if (spread > 0) {
         arbitrage.push({ bid, ask, spread, symbol });
       }
@@ -171,82 +197,88 @@ export function getMarketGood(
 }
 
 export async function runArbitrage(arbitrage: Arbitrage, ship: Ship) {
-  console.info(`${ship.symbol}: Running ${arbitrage.symbol} arbitrage.`);
+  log(ship, `Running ${arbitrage.symbol} arbitrage.`);
 
-  await navigate(ship.symbol, arbitrage.bid.marketplace.symbol);
-
-  const shipStatus = await getShip(ship.symbol);
-  const currentMarket = await getMarketplace(
-    shipStatus.nav.systemSymbol,
-    shipStatus.nav.waypointSymbol
-  );
-
-  const bidGood = getMarketGood(currentMarket, arbitrage.symbol);
-
-  if (!bidGood) {
-    throw new Error("Bid good no longer sold.");
-  }
-
-  const slippage = bidGood.purchasePrice - arbitrage.bid.price;
-
-  if (slippage !== 0) {
-    console.info(
-      `${ship.symbol}: Bid price slipped from ${arbitrage.bid.price} to ${bidGood?.purchasePrice} (${slippage})`
+  for (let trade of ["BUY", "SELL"]) {
+    await navigate(
+      ship.symbol,
+      trade === "BUY"
+        ? arbitrage.ask.marketplace.symbol
+        : arbitrage.bid.marketplace.symbol
     );
-  }
 
-  if (slippage > 0) {
-    // check if still profitable
-    console.log("STIL PROFITABLE?");
-  }
+    const shipStatus = await getShip(ship.symbol);
 
-  const invCapacity = shipStatus.cargo.capacity - shipStatus.cargo.units;
-
-  console.info(
-    `${ship.symbol}: Purchase ${invCapacity}x ${arbitrage.symbol} for ${bidGood.purchasePrice}`
-  );
-
-  await dock(ship);
-  const buyResponse = await buy(shipStatus, invCapacity, arbitrage.symbol);
-
-  console.log("buyResponse :>> ", buyResponse);
-
-  await navigate(ship.symbol, arbitrage.ask.marketplace.symbol);
-
-  const shipStatus2 = await getShip(ship.symbol);
-
-  const askMarket = await getMarketplace(
-    shipStatus2.nav.systemSymbol,
-    shipStatus2.nav.waypointSymbol
-  );
-
-  const askGood = getMarketGood(askMarket, arbitrage.symbol);
-
-  if (!askGood) {
-    throw new Error("Ask good no longer sold.");
-  }
-
-  const askSlippage = askGood.purchasePrice - arbitrage.ask.price;
-
-  if (slippage !== 0) {
-    console.info(
-      `${ship.symbol}: Ask price slipped from ${arbitrage.ask.price} to ${askGood?.purchasePrice} (${askSlippage})`
+    const currentMarket = await getMarketplace(
+      shipStatus.nav.systemSymbol,
+      shipStatus.nav.waypointSymbol
     );
+
+    await autoRefuel(currentMarket, shipStatus);
+
+    const arbitrageGood = getMarketGood(currentMarket, arbitrage.symbol);
+
+    if (!arbitrageGood) {
+      throw new Error("Arbitrage good no longer sold here.");
+      // TODO:
+      // If can't purchase return
+      // If can't sell, pick next best price even at loss.
+    }
+
+    const slippage =
+      trade === "BUY"
+        ? arbitrageGood.purchasePrice - arbitrage.ask.price
+        : arbitrageGood.sellPrice - arbitrage.bid.price;
+
+    if (slippage !== 0) {
+      if (trade === "BUY") {
+        return;
+      }
+      console.error("SLIPPING");
+    }
+
+    if (trade === "BUY") {
+      const inventoryCapacity =
+        shipStatus.cargo.capacity - shipStatus.cargo.units;
+
+      const response = await buy(
+        shipStatus,
+        inventoryCapacity,
+        arbitrage.symbol
+      );
+      console.log("response :>> ", response);
+    }
+
+    if (trade === "SELL") {
+      const amount = getInventoryQuantity(shipStatus, arbitrage.symbol);
+      const response = await sell(shipStatus, amount, arbitrage.symbol);
+      console.log("response :>> ", response);
+    }
+  }
+  return;
+}
+
+export async function autoRefuel(
+  marketplace: Marketplace,
+  ship: Ship,
+  maxMarkup: number = 5
+): Promise<void> {
+  const fuelGood = getMarketGood(marketplace, "FUEL");
+  const bestFuelQuote = totalMarket.getBestPrice("FUEL", "ASK");
+
+  if (!fuelGood || !bestFuelQuote) {
+    return;
   }
 
-  if (slippage < 0) {
-    // check if still profitable
-    console.log("STIL PROFITABLE?");
-  }
-
-  await dock(shipStatus2);
-  const sellResponse = await sell(ship, invCapacity, arbitrage.symbol);
-
-  const pnlperUnit = askGood.purchasePrice - bidGood.sellPrice;
-
-  const pnlTotal = pnlperUnit * invCapacity;
-
-  console.info(
-    `${invCapacity}x ${askGood.purchasePrice} - ${bidGood.sellPrice}= ${pnlTotal} (${pnlperUnit}/u)`
+  const fuelMarkup = Math.floor(
+    (fuelGood.purchasePrice / bestFuelQuote.price - 1) * 100
   );
+
+  if (fuelMarkup < maxMarkup) {
+    console.info(
+      `${ship.symbol} @ ${ship.nav.systemSymbol}: Refuelling at ${fuelMarkup}% markup.`
+    );
+    await autoDock(ship);
+    await refuel(ship.symbol);
+  }
 }
